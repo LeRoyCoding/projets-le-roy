@@ -65,7 +65,59 @@ const MIGRATIONS = [
   `DELETE FROM sessions;`,
 
   // 3 — comptes désactivables (le compte reste dans l'historique mais ne peut plus se connecter)
-  `ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1;`
+  `ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1;`,
+
+  // 4 — catégories personnalisables (remplacent les 8 types fixes, avec les mêmes identifiants)
+  `CREATE TABLE categories (
+     id TEXT PRIMARY KEY,
+     label TEXT NOT NULL,
+     emoji TEXT NOT NULL,
+     position INTEGER NOT NULL DEFAULT 0,
+     hidden INTEGER NOT NULL DEFAULT 0,
+     created_by TEXT,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   INSERT INTO categories (id, label, emoji, position) VALUES
+     ('devis', 'Devis', '🧾', 0),
+     ('chantier', 'Chantier', '🏗️', 1),
+     ('commercial', 'Commercial', '🤝', 2),
+     ('dev', 'Développement', '💻', 3),
+     ('admin', 'Administratif', '📋', 4),
+     ('prod', 'Production', '⚙️', 5),
+     ('event', 'Salon / évènement', '🎪', 6),
+     ('perso', 'Perso', '🏡', 7);
+   INSERT INTO categories (id, label, emoji, position)
+     SELECT DISTINCT type, type, '📁', 100 FROM tasks WHERE type NOT IN (SELECT id FROM categories);`,
+
+  // 5 — tâches sans étapes « terminées » à la main, commentaires et historique
+  `ALTER TABLE tasks ADD COLUMN completed INTEGER NOT NULL DEFAULT 0;
+   CREATE TABLE comments (
+     id TEXT PRIMARY KEY,
+     task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+     user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+     body TEXT NOT NULL,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX comments_task ON comments(task_id);
+   CREATE TABLE activity (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+     user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+     action TEXT NOT NULL,
+     detail TEXT NOT NULL DEFAULT '',
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX activity_task ON activity(task_id);`,
+
+  // 6 — clés d'accès pour les outils externes (lien avec Claude)
+  `CREATE TABLE api_tokens (
+     id TEXT PRIMARY KEY,
+     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     name TEXT NOT NULL,
+     token_hash TEXT NOT NULL UNIQUE,
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     last_used TEXT
+   );`
 ];
 
 function open(file) {
