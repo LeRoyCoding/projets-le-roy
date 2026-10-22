@@ -31,13 +31,12 @@ echo  Mise a jour des composants...
 call npm ci --omit=dev
 if errorlevel 1 goto erreurnpm
 
-rem 4. Redemarrer le serveur dans sa propre fenetre
+rem 4. Redemarrer le serveur en arriere-plan (sans fenetre)
 echo.
 echo  Redemarrage du serveur...
-start "Projets Le Roy - Serveur" "%~dp0demarrer.bat"
 echo.
 echo  ===== Mise a jour terminee =====
-timeout /t 5
+call "%~dp0demarrer-en-arriere-plan.bat"
 exit /b 0
 
 :pasdegit
@@ -49,8 +48,7 @@ exit /b 1
 echo.
 echo  La recuperation depuis GitHub a echoue (Internet ? fichiers modifies a la main ?).
 echo  Le serveur va etre relance avec l'ancienne version.
-start "Projets Le Roy - Serveur" "%~dp0demarrer.bat"
-pause
+call "%~dp0demarrer-en-arriere-plan.bat"
 exit /b 1
 
 :erreurnpm
