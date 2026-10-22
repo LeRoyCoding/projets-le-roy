@@ -366,17 +366,19 @@ document.addEventListener('click', async e => {
     case 'open-task': ui.openTask = id; ui.confirmDel = false; renderModal(); break;
     case 'close-modal': ui.openTask = null; renderModal(); break;
     case 'toggle-step': {
-      const s = t.steps.find(x => x.id === b.dataset.s); if (!s) break;
+      // Affichage immédiat (utile sur tablette), puis enregistrement ; on revient en arrière en cas d'erreur.
+      const s = t && t.steps.find(x => x.id === b.dataset.s); if (!s) break;
       const wasDone = pct(t) === 100;
-      if (await act(() => api('PATCH', '/api/steps/' + s.id, { done: !s.done }))) {
-        const nt = S.tasks.find(x => x.id === t.id);
-        if (nt && !wasDone && pct(nt) === 100) toast('Tâche terminée 🎉');
-      }
+      s.done = !s.done; render();
+      if (!wasDone && pct(t) === 100) toast('Tâche terminée 🎉');
+      try { await api('PATCH', '/api/steps/' + s.id, { done: s.done }); }
+      catch (err) { s.done = !s.done; render(); toast(err.message); }
       break;
     }
     case 'del-step': await act(() => api('DELETE', '/api/steps/' + b.dataset.s)); break;
-    case 'edit-task': ui.editId = t.id; ui.openTask = null; go('newTask', true); break;
+    case 'edit-task': if (!t) break; ui.editId = t.id; ui.openTask = null; go('newTask', true); break;
     case 'del-task':
+      if (!t) break;
       if (!ui.confirmDel) { ui.confirmDel = true; renderModal(); break; }
       ui.confirmDel = false;
       await act(async () => { await api('DELETE', '/api/tasks/' + t.id); ui.openTask = null; }, 'Tâche supprimée');
@@ -401,6 +403,12 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target;
+  // Empêche un double clic de créer deux fois la même chose.
+  if (f.dataset.sending) return;
+  f.dataset.sending = '1';
+  try { await onSubmit(f); } finally { delete f.dataset.sending; }
+});
+async function onSubmit(f) {
   if (f.id === 'login-form') {
     try {
       await api('POST', '/api/login', { userId: ui.loginUser, password: $('#l-pwd').value });
@@ -450,7 +458,7 @@ document.addEventListener('submit', async e => {
     const n = $('#n-name').value.trim(), p = $('#n-pwd').value; if (!n || !p) return;
     await act(() => api('POST', '/api/users', { name: n, password: p, role: $('#n-role').value }), n + ' ajouté à l\'équipe');
   }
-});
+}
 function showErr(f, msg) { let p = f.querySelector('.err'); if (!p) { p = document.createElement('p'); p.className = 'err'; f.querySelector('.actions').before(p); } p.textContent = msg; }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && ui.openTask) { ui.openTask = null; renderModal(); } });
 

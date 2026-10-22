@@ -21,9 +21,24 @@ timeout /t 2 /nobreak >nul
 
 :recuperer
 rem 2. Recuperer la derniere version depuis GitHub
+if exist ".git" goto tirer
+rem Installation faite a partir d'un fichier ZIP : on la relie a GitHub (les donnees ne bougent pas).
+echo  Premiere mise a jour : liaison du dossier avec GitHub...
+git init -q
+git remote add origin https://github.com/LeRoyCoding/projets-le-roy.git
+git fetch -q origin main
+if errorlevel 1 goto erreurgit
+git checkout -q -f -B main origin/main
+if errorlevel 1 goto erreurgit
+git branch -q -u origin/main main
+goto composants
+
+:tirer
 echo  Recuperation de la derniere version...
 git pull --ff-only
 if errorlevel 1 goto erreurgit
+
+:composants
 
 rem 3. Reinstaller les composants (au cas ou ils auraient change)
 echo.
@@ -40,7 +55,10 @@ call "%~dp0demarrer-en-arriere-plan.bat"
 exit /b 0
 
 :pasdegit
-echo  Git n'est pas installe sur ce PC : voir le README, etape 1.
+echo  Git n'est pas installe sur ce PC.
+echo  La page de telechargement va s'ouvrir : installez Git avec les options
+echo  par defaut, puis relancez mettre-a-jour.bat.
+start "" "https://git-scm.com/download/win"
 pause
 exit /b 1
 
