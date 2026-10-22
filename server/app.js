@@ -64,7 +64,7 @@ function createApp({ db, demo = false, publicDir = path.join(ROOT, 'public') }) 
   function currentUser(req) {
     // 1) Clé d'accès (outils externes, ex. Claude) : en-tête « Authorization: Bearer … »
     const bearer = String(req.headers.authorization || '').match(/^Bearer\s+(\S+)$/i);
-    if (bearer && db.hasTable('api_tokens')) {
+    if (bearer) {
       const row = db.prepare(`SELECT ${userCols}, t.id AS token_id FROM api_tokens t JOIN users u ON u.id = t.user_id
         WHERE t.token_hash = ? AND u.active = 1`).get(hashToken(bearer[1]));
       if (!row) return null;
@@ -114,7 +114,10 @@ function createApp({ db, demo = false, publicDir = path.join(ROOT, 'public') }) 
     req.on('close', () => listeners.delete(l));
   });
 
-  for (const r of ['connexion', 'etat', 'taches', 'groupes', 'comptes']) require('./routes/' + r)(app, ctx);
+  for (const r of ['connexion', 'etat', 'taches', 'groupes', 'categories', 'comptes']) require('./routes/' + r)(app, ctx);
+
+  // Connecteur pour Claude, téléchargeable depuis la page Compte.
+  app.get('/outils/claude-mcp.js', (req, res) => res.download(path.join(ROOT, 'outils', 'claude-mcp.js'), 'claude-mcp.js'));
 
   /* ---------- Fichiers de l'application ---------- */
   app.use(express.static(publicDir, {
