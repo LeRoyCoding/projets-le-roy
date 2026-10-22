@@ -134,6 +134,7 @@ function open(file, { backupDir = null } = {}) {
 
   const version = db.prepare('PRAGMA user_version').get().user_version;
   if (version > MIGRATIONS.length) {
+    db.close(); // libère le fichier (sous Windows, un fichier ouvert reste verrouillé)
     throw new Error(`Cette base de données vient d'une version plus récente de l'application (schéma ${version}). Lancez mettre-a-jour.bat.`);
   }
   if (version > 0 && version < MIGRATIONS.length && backupDir) {
