@@ -359,3 +359,18 @@ a.btn{text-decoration:none;color:inherit}
 .cat-list b{margin-right:0;min-width:120px}
 .cat-list .hint{margin-right:auto}
 .keybox .hint code{display:inline;padding:1px 4px;font-size:12px}
+button.stat{font:inherit;color:var(--muted);cursor:pointer}
+button.stat:hover{border-color:var(--muted)}
+button.stat.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button.stat.on b{color:var(--bg)}
+
+/* Impression : la page tient sur papier, sans menus ni boutons */
+@media print{
+  :root{--bg:#fff;--surface:#fff;--shadow:none}
+  .hdr .tabsbar,.toolbar,.filter,.icon-btn,.me,.toast,.offline,.sheet-f,.addstep,.addcomment,.del,.data-btns{display:none!important}
+  .hdr{position:static}
+  .gcard,.panel{break-inside:avoid;box-shadow:none}
+  .modal{position:static;display:block}.scrim{display:none}.sheet{box-shadow:none;max-height:none;width:100%}
+  .tl-wrap{overflow:visible}
+  body{font-size:12px}
+}

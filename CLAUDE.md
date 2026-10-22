@@ -68,3 +68,11 @@ Reproduire fidèlement ce rendu. Ne pas réinventer le design.
 ## Plus tard (ne pas faire tout de suite)
 - Lien avec Business Central (clients, devis).
 - Notifications d'échéance.
+
+## Organisation du code (mise à jour d'octobre 2026)
+- Les « types » de tâche sont devenus des **catégories** modifiables (table `categories`, onglet « Catégories ») ; `tasks.type` contient l'identifiant de la catégorie.
+- Serveur : `server/index.js` (démarrage), `server/app.js` (application, sécurité, connexion par cookie ou clé d'accès), `server/routes/*.js` (une route par thème), `server/requetes.js` (règles d'accès), `server/db.js` (migrations numérotées : toujours **ajouter** une migration, ne jamais modifier une migration publiée).
+- Interface : `public/js/base.js` (outils), `regles.js` (état et règles), `ecrans.js` (écrans), `fiche.js` (fiche tâche), `actions.js` (évènements, temps réel).
+- Connecteur Claude : `outils/claude-mcp.js` (MCP sans dépendance) et `lier-a-claude.bat`.
+- Tests : `npm test` (dossier `tests/`), relancés par GitHub Actions sous Windows et Linux. Les faire passer avant chaque envoi.
+- Documentation : `README.md` (installation), `docs/guide-utilisateur.md`, `docs/lier-a-claude.md`, `docs/audit.md`.

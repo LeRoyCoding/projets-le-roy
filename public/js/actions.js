@@ -18,7 +18,10 @@ function render() {
 }
 // Ne réaffiche que les résultats (la zone de recherche garde le curseur).
 function renderResults() {
-  if (ui.view === 'home') { $('#results').innerHTML = homeResults(); $('#stats').innerHTML = homeStats(visibleTasks({ ignoreDone: true })); }
+  if (ui.view === 'home') {
+    $('#results').innerHTML = homeResults(); $('#stats').innerHTML = homeStats(visibleTasks({ ignoreDone: true }));
+    const q = $('#q'); if (q && q.value !== ui.search && document.activeElement !== q) q.value = ui.search;
+  }
   else if (ui.view === 'timeline') { const x = $('#tl-wrap')?.scrollLeft; $('#results').innerHTML = timelineResults(); placeTimeline(x); }
 }
 // Timeline : on garde la position, ou on centre « aujourd'hui » à l'ouverture.
@@ -144,7 +147,8 @@ document.addEventListener('click', async e => {
       await act(async () => { await api('DELETE', '/api/tasks/' + t.id); ui.openTask = null; ui.details = null; }, 'Tâche supprimée');
       break;
     case 'filter-user': if (id === 'all') ui.filter = []; else { ui.filter = ui.filter.includes(id) ? ui.filter.filter(x => x !== id) : [...ui.filter, id]; } render(); break;
-    case 'clear-filters': ui.search = ''; ui.cat = ''; ui.filter = []; ui.onlyMine = false; pref.set('onlyMine', false); ui.hideDone = false; pref.set('hideDone', false); render(); break;
+    case 'stat-filter': ui.statusFilter = ui.statusFilter === id ? null : id; renderResults(); break;
+    case 'clear-filters': ui.statusFilter = null; ui.search = ''; ui.cat = ''; ui.filter = []; ui.onlyMine = false; pref.set('onlyMine', false); ui.hideDone = false; pref.set('hideDone', false); render(); break;
     case 'tl-group': ui.tlGroup = id; renderResults(); break;
     // Formulaire de tâche
     case 'draft-add-step': { const ol = $('#steps-ed'); ol.insertAdjacentHTML('beforeend', stepRow(null)); ol.lastElementChild.querySelector('.s-label').focus(); break; }

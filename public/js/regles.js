@@ -7,6 +7,7 @@ const ui = {
   view: 'home', loginUser: null, loginErr: '',
   filter: [],                                  // admin : personnes sélectionnées
   search: '', cat: '',                         // recherche et catégorie
+  statusFilter: null,                          // compteur cliqué : 'open' | 'soon' | 'late'
   hideDone: pref.get('hideDone', false),       // masquer les tâches terminées
   onlyMine: pref.get('onlyMine', false),       // utilisateur : seulement mes tâches
   tlGroup: 'all',
@@ -67,9 +68,10 @@ function visibleTasks({ ignoreDone = false } = {}) {
   if (ui.cat) list = list.filter(t => t.type === ui.cat);
   if (ui.search) list = list.filter(t => matchesSearch(t, ui.search));
   if (ui.hideDone && !ignoreDone) list = list.filter(t => status(t) !== 'done');
+  if (ui.statusFilter && !ignoreDone) list = list.filter(t => ui.statusFilter === 'open' ? status(t) !== 'done' : status(t) === ui.statusFilter);
   return list;
 }
-const filtersActive = () => !!(ui.search || ui.cat || (isAdmin() && ui.filter.length) || (!isAdmin() && ui.onlyMine));
+const filtersActive = () => !!(ui.search || ui.cat || ui.statusFilter || (isAdmin() && ui.filter.length) || (!isAdmin() && ui.onlyMine));
 function visibleGroups(tasks) {
   let list;
   if (!isAdmin()) {
@@ -78,7 +80,7 @@ function visibleGroups(tasks) {
   } else if (!ui.filter.length) list = S.groups;
   else list = S.groups.filter(g => tasks.some(t => t.groupId === g.id) || (g.members || []).some(m => ui.filter.includes(m)));
   // Avec une recherche ou une catégorie, on n'affiche que les groupes qui ont des résultats.
-  if (ui.search || ui.cat) list = list.filter(g => tasks.some(t => t.groupId === g.id));
+  if (ui.search || ui.cat || ui.statusFilter) list = list.filter(g => tasks.some(t => t.groupId === g.id));
   return sortGroups(list);
 }
 function groupName(g) {

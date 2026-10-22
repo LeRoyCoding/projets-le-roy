@@ -99,7 +99,7 @@ module.exports = function (app, { db, auth, handle, q }) {
       writeSteps(t.id, d.steps);
       const changes = describeChanges(t, d);
       if (before.length !== d.steps.length || before.some((s, i) => s.label !== d.steps[i].label)) changes.push('étapes');
-      log(t.id, req.me.id, 'modification', changes.join(', '));
+      if (changes.length) log(t.id, req.me.id, 'modification', changes.join(', '));
     });
   }, { notify: true }));
 

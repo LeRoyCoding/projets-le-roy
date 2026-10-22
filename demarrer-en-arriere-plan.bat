@@ -2,6 +2,12 @@
 cd /d "%~dp0"
 title Projets Le Roy - Demarrage
 
+where node >nul 2>nul
+if errorlevel 1 (
+  echo  Node.js n'est pas installe sur ce PC : lancez d'abord installer.bat
+  pause
+  exit /b 1
+)
 if not exist "node_modules\express" (
   echo  Les composants ne sont pas installes : lancez d'abord installer.bat
   pause
