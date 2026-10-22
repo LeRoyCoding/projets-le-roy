@@ -1,13 +1,11 @@
 // Base de données SQLite (module intégré à Node.js : rien à compiler sous Windows).
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
 const bcrypt = require('bcryptjs');
+const { newId, todayIso } = require('./outils');
 
 const ROOT = path.join(__dirname, '..');
-
-const newId = () => crypto.randomBytes(6).toString('hex');
 
 // Chaque migration ne s'exécute qu'une fois ; on n'en modifie jamais une déjà publiée,
 // on en ajoute une nouvelle à la suite. Les données existantes sont ainsi conservées.
@@ -61,7 +59,13 @@ const MIGRATIONS = [
      created_at TEXT NOT NULL DEFAULT (datetime('now')),
      last_seen TEXT NOT NULL DEFAULT (datetime('now'))
    );
-   CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT);`
+   CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT);`,
+
+  // 2 — les jetons de session sont désormais stockés hachés : tout le monde se reconnecte une fois.
+  `DELETE FROM sessions;`,
+
+  // 3 — comptes désactivables (le compte reste dans l'historique mais ne peut plus se connecter)
+  `ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1;`
 ];
 
 function open(file) {
@@ -83,6 +87,7 @@ function open(file) {
     });
   }
 
+  db.hasTable = name => !!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name);
   db.getSetting = key => db.prepare('SELECT value FROM settings WHERE key = ?').get(key)?.value ?? null;
   db.setSetting = (key, value) =>
     db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
@@ -102,8 +107,7 @@ function startDailyBackup(db, dir, keep = 60) {
   const run = () => {
     try {
       fs.mkdirSync(dir, { recursive: true });
-      const d = new Date();
-      const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const day = todayIso();
       const target = path.join(dir, `projets-${day}.sqlite`);
       if (!fs.existsSync(target)) {
         db.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
