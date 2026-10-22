@@ -5,7 +5,7 @@ et des nouveautés demandées. Tout ce qui est listé ici est **fait et vérifi�
 
 ## En bref
 
-- **16 problèmes trouvés et corrigés**, dont 4 de sécurité et 6 de fiabilité. Aucun ne mettait les données en danger
+- **17 problèmes trouvés et corrigés**, dont 4 de sécurité et 7 de fiabilité. Aucun ne mettait les données en danger
   immédiat, mais plusieurs auraient gêné l'équipe au quotidien.
 - **Nouveautés** : catégories personnalisables, commentaires, historique, recherche et filtres, gestion de l'équipe,
   mode sombre, export Excel, lien avec Claude.
@@ -32,6 +32,7 @@ et des nouveautés demandées. Tout ce qui est listé ici est **fait et vérifi�
 | 14 | Fiche tâche : le clavier (Tab) sortait de la fenêtre, le focus n'était pas rendu à la fermeture | Faible (accessibilité) | Corrigé |
 | 15 | Serveur en un seul fichier, aucun test : chaque modification risquait de casser quelque chose sans qu'on le voie | Moyenne (maintenance) | Serveur découpé par thème, 36 tests automatiques |
 | 16 | Interface en un seul fichier de 500 lignes | Faible (maintenance) | Découpée en 5 fichiers (`public/js/`) |
+| 17 | `mettre-a-jour.bat` se remplaçait lui-même pendant la mise à jour ; Windows lisant un script au fur et à mesure, la fin pouvait mal s'exécuter | Moyenne | Le script s'exécute depuis une copie temporaire |
 
 Points vérifiés **sans problème** : mots de passe hachés (bcrypt), droits d'accès (un utilisateur ne voit jamais les tâches
 privées d'un autre, même en appelant le serveur directement), accès limité au réseau local, protection contre les

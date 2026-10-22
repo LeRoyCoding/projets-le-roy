@@ -1,5 +1,12 @@
 @echo off
-cd /d "%~dp0"
+rem Ce script est remplace par la mise a jour elle-meme : Windows lisant un .bat au fur et a mesure,
+rem on l'execute depuis une copie temporaire pour eviter toute confusion.
+if /i not "%~1"=="--copie" (
+  copy /y "%~f0" "%TEMP%\maj-projets-le-roy.bat" >nul
+  "%TEMP%\maj-projets-le-roy.bat" --copie "%~dp0"
+)
+set "APPDIR=%~2"
+cd /d "%APPDIR%"
 title Projets Le Roy - Mise a jour
 echo.
 echo  ===== Projets Le Roy : mise a jour =====
@@ -51,7 +58,7 @@ echo.
 echo  Redemarrage du serveur...
 echo.
 echo  ===== Mise a jour terminee =====
-call "%~dp0demarrer-en-arriere-plan.bat"
+call "%APPDIR%demarrer-en-arriere-plan.bat"
 exit /b 0
 
 :pasdegit
@@ -66,7 +73,7 @@ exit /b 1
 echo.
 echo  La recuperation depuis GitHub a echoue (Internet ? fichiers modifies a la main ?).
 echo  Le serveur va etre relance avec l'ancienne version.
-call "%~dp0demarrer-en-arriere-plan.bat"
+call "%APPDIR%demarrer-en-arriere-plan.bat"
 exit /b 1
 
 :erreurnpm
