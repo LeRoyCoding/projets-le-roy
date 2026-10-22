@@ -1,0 +1,18 @@
+{
+  "name": "projets-le-roy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gestion de projets et de tâches – Le Roy / Lead Le Roy Concept",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "demo": "node --disable-warning=ExperimentalWarning server/index.js --demo"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.22.3"
+  }
+}

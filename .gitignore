@@ -1,0 +1,14 @@
+# Dépendances (réinstallées par installer.bat)
+node_modules/
+
+# Données de production : jamais dans Git
+donnees/
+sauvegardes/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Divers
+*.log
+.DS_Store
+Thumbs.db
