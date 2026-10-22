@@ -1,0 +1,16 @@
+{
+  "name": "Projets Le Roy",
+  "short_name": "Projets",
+  "description": "Projets et tâches de l'équipe Le Roy / Lead Le Roy Concept",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F2F0EF",
+  "theme_color": "#3D3A39",
+  "icons": [
+    { "src": "/img/icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/img/icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/img/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
