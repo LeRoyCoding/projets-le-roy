@@ -21,7 +21,7 @@ Les collègues l'ouvrent dans leur navigateur depuis le même Wi-Fi, sans rien i
    - si une fenêtre GitHub demande de vous connecter, connectez-vous avec le compte qui a accès au dépôt.
    - L'application est maintenant dans le dossier `C:\ProjetsLeRoy`.
 
-## 2. Les trois scripts à double-cliquer
+## 2. Les scripts à double-cliquer
 
 Tous se trouvent dans `C:\ProjetsLeRoy`.
 
@@ -30,30 +30,39 @@ Tous se trouvent dans `C:\ProjetsLeRoy`.
 Vérifie que Node.js est présent, puis installe les composants nécessaires.
 Attendez le message **« Installation terminée »**, puis appuyez sur une touche.
 
-### `demarrer.bat` — lance l'application
+### `demarrer-en-arriere-plan.bat` — lance l'application, sans fenêtre (conseillé)
 
-Une fenêtre noire s'ouvre et affiche :
+L'application démarre **sans fenêtre noire à garder ouverte**. Une petite fenêtre affiche juste :
 
 ```
-   Projets Le Roy est démarré
+   Projets Le Roy fonctionne en arrière-plan
    Sur ce PC          : http://localhost:3000
    Pour les collègues : http://192.168.1.25:3000
 ```
 
-- **Laissez cette fenêtre ouverte** (vous pouvez la réduire). La fermer arrête l'application.
-- Donnez aux collègues l'adresse de la ligne « Pour les collègues ».
+- Donnez aux collègues l'adresse de la ligne « Pour les collègues », puis appuyez sur une touche : la fenêtre se ferme et l'application continue de tourner.
+- Relancer ce script quand l'application tourne déjà ne fait rien de mal : il réaffiche simplement l'adresse.
 - La toute première fois, Windows peut demander d'autoriser « Node.js » dans le pare-feu :
   cochez **Réseaux privés** et cliquez sur **Autoriser**. Sans cela, les collègues ne pourront pas se connecter.
+
+### `arreter.bat` — arrête l'application
+
+À utiliser si vous voulez arrêter l'application lancée en arrière-plan.
+
+### `demarrer.bat` — lance l'application avec sa fenêtre (dépannage)
+
+Même chose, mais la fenêtre noire reste ouverte et affiche les messages du serveur.
+Utile si quelque chose ne marche pas. **La fermer arrête l'application.**
 
 ### `mettre-a-jour.bat` — installe la dernière version
 
 À lancer quand une nouvelle version a été publiée sur GitHub.
-Il arrête le serveur, récupère la nouvelle version, réinstalle les composants et relance le serveur.
+Il arrête l'application, récupère la nouvelle version, réinstalle les composants et relance l'application en arrière-plan.
 **Les données ne sont jamais touchées.**
 
 ## 3. Démarrage automatique avec Windows (conseillé)
 
-- Double-cliquez sur `activer-demarrage-auto.bat` : le serveur se lancera tout seul (fenêtre réduite) à chaque ouverture de session sur le PC serveur.
+- Double-cliquez sur `activer-demarrage-auto.bat` : l'application se lancera toute seule, sans fenêtre, à chaque ouverture de session sur le PC serveur.
 - Pour annuler : `desactiver-demarrage-auto.bat`.
 
 Pensez à régler le PC serveur pour qu'il **ne se mette pas en veille** (Paramètres → Système → Alimentation).
@@ -68,7 +77,7 @@ Pensez à régler le PC serveur pour qu'il **ne se mette pas en veille** (Param�
 
 ## 5. Installer l'application sur les postes des collègues
 
-Sur chaque PC ou tablette, ouvrez l'adresse donnée par `demarrer.bat` (par exemple `http://192.168.1.25:3000`) dans **Chrome** ou **Edge**, puis :
+Sur chaque PC ou tablette, ouvrez l'adresse donnée par `demarrer-en-arriere-plan.bat` (par exemple `http://192.168.1.25:3000`) dans **Chrome**, **Edge** ou **Brave**, puis :
 
 - si une icône « Installer » apparaît dans la barre d'adresse, cliquez dessus ;
 - sinon, menu **⋮** → **Caster, enregistrer et partager** → **Créer un raccourci…** → cochez **Ouvrir dans une fenêtre** → **Créer**.
@@ -80,7 +89,7 @@ L'application apparaît alors avec l'icône Le Roy, comme un vrai logiciel.
 - Les données sont dans `C:\ProjetsLeRoy\donnees\projets.sqlite` (un seul fichier).
 - Chaque jour, une copie est faite automatiquement dans `C:\ProjetsLeRoy\sauvegardes\` (les 60 derniers jours sont gardés).
   Pour plus de sécurité, copiez de temps en temps ce dossier sur une clé USB ou un disque réseau.
-- **Restaurer une sauvegarde** : arrêtez le serveur (fermez la fenêtre noire), remplacez `donnees\projets.sqlite` par la sauvegarde choisie (renommée `projets.sqlite`), supprimez `projets.sqlite-wal` et `projets.sqlite-shm` s'ils existent, puis relancez `demarrer.bat`.
+- **Restaurer une sauvegarde** : arrêtez l'application (`arreter.bat`), remplacez `donnees\projets.sqlite` par la sauvegarde choisie (renommée `projets.sqlite`), supprimez `projets.sqlite-wal` et `projets.sqlite-shm` s'ils existent, puis relancez `demarrer-en-arriere-plan.bat`.
 - Ces fichiers ne sont jamais envoyés sur GitHub.
 
 L'application n'est accessible que depuis le réseau local du bureau, pas depuis Internet.
