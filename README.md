@@ -6,7 +6,7 @@ Elle tourne sur **un PC du bureau** (le « PC serveur », toujours allumé).
 Les collègues l'ouvrent dans leur navigateur depuis le même Wi-Fi, sans rien installer.
 
 - 📖 **Mode d'emploi pour l'équipe** : [docs/guide-utilisateur.md](docs/guide-utilisateur.md)
-- 🤖 **Lier l'application à Claude** : [docs/lier-a-claude.md](docs/lier-a-claude.md)
+- 🤖 **Lier l'application à Claude** : [docs/lier-a-claude.md](docs/lier-a-claude.md) · **à ChatGPT** : [docs/lier-a-chatgpt.md](docs/lier-a-chatgpt.md)
 - 🔎 **Rapport d'audit et améliorations** : [docs/audit.md](docs/audit.md)
 - 📄 **Guides Word à imprimer** : [docs/Guide-installation-Projets-Le-Roy.docx](docs/Guide-installation-Projets-Le-Roy.docx) et [docs/Guide-utilisation-Projets-Le-Roy.docx](docs/Guide-utilisation-Projets-Le-Roy.docx)
 
@@ -41,6 +41,7 @@ Tous se trouvent dans `C:\ProjetsLeRoy`.
 | `mettre-a-jour.bat` | Installe la dernière version publiée sur GitHub et relance l'application. **Les données ne sont jamais touchées.** |
 | `demarrer.bat` | Lance l'application avec sa fenêtre noire (utile pour voir un message d'erreur). La fermer arrête l'application. |
 | `lier-a-claude.bat` | Relie l'application Claude (sur ordinateur) à vos tâches. Voir [docs/lier-a-claude.md](docs/lier-a-claude.md). |
+| `ouvrir-pour-chatgpt.bat` | Ouvre un tunnel sécurisé vers le connecteur ChatGPT, le temps de l'utiliser (le connecteur doit être activé par l'administrateur). Voir [docs/lier-a-chatgpt.md](docs/lier-a-chatgpt.md). |
 
 Pensez à régler le PC serveur pour qu'il **ne se mette pas en veille** (Paramètres → Système → Alimentation).
 
@@ -72,6 +73,7 @@ L'icône Le Roy apparaît sur le bureau, comme un vrai logiciel.
   supprimez `projets.sqlite-wal` et `projets.sqlite-shm` s'ils existent, puis `demarrer-en-arriere-plan.bat`.
 
 L'application n'est accessible que depuis le réseau local du bureau, pas depuis Internet.
+Seule exception, volontaire et désactivée par défaut : le connecteur ChatGPT (outils de tâches uniquement, clé obligatoire), quand la fenêtre `ouvrir-pour-chatgpt.bat` est ouverte.
 
 ## 6. Dépannage
 
@@ -104,5 +106,6 @@ dans un fichier séparé `donnees\demo.sqlite`.
 - **Sécurité** : mots de passe hachés (bcrypt), sessions par cookie (jetons hachés en base), réseau local uniquement,
   en-têtes CSP, clés d'accès personnelles pour les outils externes.
 - **Tests** : `npm test` (API, droits, migrations, connecteur Claude), lancés automatiquement sur GitHub (Windows et Linux).
-- **Connecteur Claude** : `outils/claude-mcp.js` (protocole MCP, sans dépendance).
+- **Connecteurs IA** : outils communs dans `outils/mcp-commun.js` ; Claude Desktop via `outils/claude-mcp.js` (MCP sur l'entrée standard) ;
+  ChatGPT via `server/mcp-http.js` (MCP sur HTTP, port 3001 limité au PC, désactivé par défaut) et `outils/tunnel-chatgpt.js` (tunnel Cloudflare).
 - Port modifiable avec la variable d'environnement `PORT`.

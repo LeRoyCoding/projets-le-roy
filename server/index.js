@@ -4,6 +4,7 @@ const os = require('os');
 const path = require('path');
 const { open, startDailyBackup, ROOT } = require('./db');
 const { createApp } = require('./app');
+const { pilote } = require('./mcp-http');
 
 const DEMO = process.argv.includes('--demo');
 const PORT = Number(process.env.PORT) || 3000;
@@ -42,6 +43,9 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('   Laissez cette fenêtre ouverte (vous pouvez la réduire).');
   console.log(`   Base de données : ${DB_FILE}`);
   console.log('');
+  // Connecteur ChatGPT : ne démarre que s'il a été activé par l'administrateur.
+  app.locals.connecteur = pilote({ db, mainPort: PORT });
+  app.locals.connecteur.appliquer();
 });
 server.on('error', e => {
   if (e.code === 'EADDRINUSE') console.error(`\n  Le port ${PORT} est déjà utilisé : le serveur est sans doute déjà lancé.\n`);

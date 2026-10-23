@@ -374,3 +374,8 @@ button.stat.on b{color:var(--bg)}
   .tl-wrap{overflow:visible}
   body{font-size:12px}
 }
+.connecteur{margin-top:16px;padding:12px 14px;border:1px dashed var(--line);border-radius:8px;display:grid;gap:8px}
+.connecteur.on{border-style:solid;border-color:var(--brand)}
+.connecteur h4{margin:0;font-family:var(--f-display);font-size:17px;text-transform:uppercase;letter-spacing:.04em}
+.connecteur .hint{margin:0}
+.data-btns .rolechip{align-self:center}
