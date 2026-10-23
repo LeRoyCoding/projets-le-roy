@@ -72,6 +72,7 @@ module.exports = function (app, { db, auth, handle }) {
       categories,
       taskCounts,
       defaultAdminPassword: admin && db.getSetting('default_admin_password') === '1',
+      connecteur: { actif: db.getSetting('connecteur_internet') === '1', port: app.locals.connecteur?.port || Number(process.env.MCP_PORT) || 3001 },
       tasks: tasks.map(t => ({
         id: t.id, groupId: t.group_id, ownerId: t.owner_id, type: t.type, title: t.title, desc: t.description,
         start: t.start_date, end: t.end_date, completed: !!t.completed, comments: commentCounts[t.id] || 0,

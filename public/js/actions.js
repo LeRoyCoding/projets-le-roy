@@ -206,6 +206,11 @@ document.addEventListener('click', async e => {
     case 'user-edit-cancel': ui.editUser = null; render(); break;
     case 'export-csv': exportCsv(); break;
     case 'copy': copyText(b.dataset.target); break;
+    case 'connecteur': {
+      const on = b.dataset.on === '1';
+      await act(() => api('POST', '/api/connecteur', { actif: on }), on ? 'Connecteur ChatGPT activé' : 'Connecteur ChatGPT désactivé');
+      break;
+    }
     case 'key-del': if (await act(() => api('DELETE', '/api/tokens/' + id), 'Clé supprimée')) loadKeys(); break;
     case 'logout':
       try { await api('POST', '/api/logout', {}); } catch { /* on déconnecte quand même l'écran */ }

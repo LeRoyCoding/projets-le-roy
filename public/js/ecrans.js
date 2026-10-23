@@ -314,15 +314,21 @@ function vClaude() {
   // Sur le PC serveur on voit « localhost » : la configuration doit plutôt donner l'adresse réseau.
   const local = /^(localhost|127\.|\[::1\])/.test(location.hostname);
   const url = local && S.lanUrls && S.lanUrls[0] ? S.lanUrls[0] : location.origin;
-  return `<div class="panel"><h3>${emo('🤖')} Lier à Claude</h3>
-  <p class="note">Une clé d'accès permet à l'application Claude (sur ordinateur) de lire et de faire avancer <b>vos</b> tâches : « Quelles sont mes tâches en retard ? », « Crée un devis pour l'élevage Martin avec ces étapes… ». La clé a les mêmes droits que votre compte.</p>
+  const cx = S.connecteur || { actif: false };
+  return `<div class="panel"><h3>${emo('🤖')} Lier à Claude ou ChatGPT</h3>
+  <p class="note">Une clé d'accès permet à un assistant (Claude ou ChatGPT) de lire et de faire avancer <b>vos</b> tâches : « Quelles sont mes tâches en retard ? », « Crée un devis pour l'élevage Martin avec ces étapes… ». La clé a les mêmes droits que votre compte, et l'assistant ne peut rien supprimer.</p>
   ${ui.newKey ? `<div class="keybox"><p><b>Votre nouvelle clé</b> (elle ne sera plus affichée : copiez-la maintenant) :</p>
     <code id="new-key">${esc(ui.newKey)}</code>
     <div class="data-btns"><button class="btn primary sm" data-act="copy" data-target="new-key">Copier la clé</button><button class="btn sm" data-act="copy" data-target="claude-conf">Copier la configuration complète</button></div>
-    <p class="hint"><b>Le plus simple :</b> sur le PC où Claude est installé, double-cliquez sur <b>lier-a-claude.bat</b> (dans le dossier de l'application) et collez la clé quand elle est demandée. Adresse à indiquer : <b>${esc(url)}</b></p>
-    <p class="hint">Sinon, à la main : <a href="/outils/claude-mcp.js" download>téléchargez le connecteur</a>, enregistrez-le dans <code>C:\ProjetsLeRoy\outils\</code>, puis ajoutez cette configuration dans Claude (Paramètres → Développeur → Modifier la configuration) :</p>
-    <pre id="claude-conf">${esc(JSON.stringify({ mcpServers: { 'projets-le-roy': { command: 'node', args: ['C:\\ProjetsLeRoy\\outils\\claude-mcp.js'], env: { PROJETS_URL: url, PROJETS_CLE: ui.newKey } } } }, null, 2))}</pre></div>` : ''}
+    <p class="hint"><b>${emo('🟠')} Claude</b> — sur le PC où Claude est installé, double-cliquez sur <b>lier-a-claude.bat</b> (dans le dossier de l'application) et collez la clé quand elle est demandée. Adresse à indiquer : <b>${esc(url)}</b></p>
+    <p class="hint">Sinon, à la main : <a href="/outils/claude-mcp.js" download>téléchargez le connecteur</a>, enregistrez-le dans <code>C:\\ProjetsLeRoy\\outils\\</code>, puis ajoutez cette configuration dans Claude (Paramètres → Développeur → Modifier la configuration) :</p>
+    <pre id="claude-conf">${esc(JSON.stringify({ mcpServers: { 'projets-le-roy': { command: 'node', args: ['C:\\ProjetsLeRoy\\outils\\claude-mcp.js'], env: { PROJETS_URL: url, PROJETS_CLE: ui.newKey } } } }, null, 2))}</pre>
+    <p class="hint"><b>${emo('🟢')} ChatGPT</b> — ${cx.actif ? 'sur le PC serveur, double-cliquez sur <b>ouvrir-pour-chatgpt.bat</b> et collez la clé : il affiche l\'adresse à ajouter dans ChatGPT (Paramètres → Applications et connecteurs → mode développeur → Créer).' : 'le connecteur ChatGPT est désactivé : l\'administrateur doit d\'abord l\'activer (page Compte).'} Guide détaillé : docs\\lier-a-chatgpt.md.</p></div>` : ''}
   ${keys.length ? `<ul class="team keys">${keys.map(k => `<li>${ic('key')}<b>${esc(k.name)}</b><span class="meta">créée ${fmtStamp(k.createdAt)}${k.lastUsed ? ' · utilisée ' + fmtStamp(k.lastUsed) : ' · jamais utilisée'}</span><span></span><button class="del" data-act="key-del" data-id="${esc(k.id)}" aria-label="Supprimer la clé ${esc(k.name)}">${ic('trash')}</button></li>`).join('')}</ul>` : ''}
   <form id="key-form" class="inline-key"><input type="text" id="k-name" maxlength="60" value="Claude" aria-label="Nom de la clé"><button class="btn sm">${ic('key', 'sm')}Créer une clé d'accès</button></form>
+  ${isAdmin() ? `<div class="connecteur ${cx.actif ? 'on' : ''}"><h4>${emo('🌐')} Connecteur ChatGPT (administrateur)</h4>
+   <p class="hint">ChatGPT ne sait joindre que des outils accessibles depuis Internet. Une fois activé, le connecteur reste fermé tant que personne ne lance <b>ouvrir-pour-chatgpt.bat</b> sur le PC serveur. Ce script n'ouvre que les outils de tâches (jamais les pages de l'application), et seulement pour les personnes qui ont une clé. Fermer sa fenêtre coupe l'accès.</p>
+   <div class="data-btns"><span class="rolechip ${cx.actif ? 'admin' : ''}">${cx.actif ? 'Activé' : 'Désactivé'}</span>
+   <button class="btn sm ${cx.actif ? '' : 'primary'}" data-act="connecteur" data-on="${cx.actif ? 0 : 1}">${cx.actif ? 'Désactiver' : 'Activer le connecteur ChatGPT'}</button></div></div>` : ''}
   </div>`;
 }

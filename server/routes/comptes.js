@@ -87,6 +87,13 @@ module.exports = function (app, { db, auth, adminOnly, handle, q }) {
     if (!r.changes) fail(404, 'Cette clé n\'existe plus.');
   }));
 
+  /* ---------- Connecteur ChatGPT (désactivé par défaut) ---------- */
+  app.post('/api/connecteur', auth, adminOnly, handle(req => {
+    db.setSetting('connecteur_internet', req.body.actif ? '1' : '0');
+    app.locals.connecteur?.appliquer();
+    return { actif: db.getSetting('connecteur_internet') === '1' };
+  }));
+
   /* ---------- Sauvegarde à télécharger (admin) ---------- */
   app.get('/api/sauvegarde', auth, adminOnly, (req, res) => {
     const tmp = path.join(os.tmpdir(), `projets-le-roy-${process.pid}-${Date.now()}.sqlite`);

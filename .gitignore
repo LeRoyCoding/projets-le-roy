@@ -12,3 +12,7 @@ sauvegardes/
 *.log
 .DS_Store
 Thumbs.db
+
+# Outil de tunnel téléchargé par ouvrir-pour-chatgpt.bat
+outils/cloudflared.exe
+outils/cloudflared
