@@ -66,9 +66,10 @@ function configFiles() {
     env: { PROJETS_URL: url, PROJETS_CLE: key }
   };
 
+  // Selon la façon dont Claude a été installé, il lit l'un ou l'autre de ces fichiers :
+  // on écrit dans l'emplacement standard dans tous les cas, plus ceux qui existent déjà.
   const files = configFiles();
-  const existing = files.filter(f => fs.existsSync(path.dirname(f)));
-  const targets = existing.length ? existing : [files[0]];
+  const targets = [files[0], ...files.slice(1).filter(f => fs.existsSync(path.dirname(f)))];
   for (const file of targets) {
     let conf = {};
     if (fs.existsSync(file)) {
@@ -89,6 +90,7 @@ function configFiles() {
 
   console.log('\n  ===== C\'est fait =====');
   console.log('  Quittez complètement Claude (clic droit sur son icône près de l\'horloge → Quitter), puis rouvrez-le.');
+  console.log('  Vérifiez dans Claude : Paramètres → Développeur doit afficher « projets-le-roy ».');
   console.log('  Essayez ensuite : « Quelles sont mes tâches en retard ? »\n');
   rl.close();
 })();
