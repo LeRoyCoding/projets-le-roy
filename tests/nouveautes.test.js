@@ -123,7 +123,8 @@ test('historique : création, étapes cochées, modifications', async () => {
   await E.claire.patch('/api/steps/' + t.steps[0].id, { done: true });
   await E.claire.patch('/api/steps/' + t.steps[0].id, { done: true }); // déjà cochée : pas de doublon
   await E.antoine.put('/api/tasks/' + id, { ...t, title: 'Nouveau titre', end: '2026-11-15' });
-  const a = (await E.antoine.get('/api/tasks/' + id + '/details')).data.activity;
+  assert.deepEqual((await E.antoine.get('/api/tasks/' + id + '/details')).data.activity, [], 'journal réservé à l\'admin');
+  const a = (await E.admin.get('/api/tasks/' + id + '/details')).data.activity;
   assert.deepEqual(a.map(x => x.action), ['modification', 'etape_cochee', 'creation']);
   assert.match(a[0].detail, /titre/);
   assert.match(a[0].detail, /15\/11\/2026/);

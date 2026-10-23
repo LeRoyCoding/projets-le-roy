@@ -14,6 +14,7 @@ const ui = {
   editId: null, dupFrom: null, editGroup: null, presetGroup: null,
   openTask: null, confirmDel: false, details: null,
   editUser: null, editCat: null, catDel: null, newKey: null, keys: [], historyOpen: false,
+  hist: null, histQ: '',
   pwdErr: '', busy: false
 };
 
@@ -48,7 +49,8 @@ function status(t) { if (pct(t) === 100) return 'done'; const d = daysLeft(t); i
 const isShared = g => (g.members || []).length > 1;
 const people = () => S.users.filter(u => u.role !== 'admin' && u.active);
 // Groupes communs d'abord, puis groupes privés ; dans l'ordre de création.
-const sortGroups = list => [...list].sort((a, b) => (isShared(b) - isShared(a)));
+// Les groupes arrivent du serveur dans l'ordre réglé par l'administrateur.
+const sortGroups = list => [...list];
 const myGroups = () => { const me = cur(); return sortGroups(isAdmin() ? S.groups : S.groups.filter(g => (g.members || []).includes(me.id))); };
 const canEdit = t => { const me = cur(); return isAdmin() || t.ownerId === me.id || (groupById(t.groupId).members || []).includes(me.id); };
 function taskConcerns(t, ids) { if (t.ownerId) return ids.includes(t.ownerId); return (groupById(t.groupId).members || []).some(m => ids.includes(m)); }
@@ -87,5 +89,12 @@ function groupName(g) {
   // Les groupes « Perso » portent le même nom : l'admin voit à qui ils appartiennent
   if (isAdmin() && !isShared(g) && g.members?.length) return `${esc(g.name)} · ${esc(userById(g.members[0]).name)}`;
   return esc(g.name);
+}
+// Date à laquelle une tâche terminée quittera l'écran (« AAAA-MM-JJ HH:MM:SS » UTC → date locale).
+function disparitionLe(t) {
+  if (!t.doneAt) return null;
+  const d = new Date(String(t.doneAt).replace(' ', 'T') + 'Z');
+  d.setDate(d.getDate() + (S.archiveJours || 7));
+  return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 const statusLabel = t => ({ done: 'Terminé', late: 'En retard', soon: 'Sous 7 jours', ok: 'En cours' })[status(t)];

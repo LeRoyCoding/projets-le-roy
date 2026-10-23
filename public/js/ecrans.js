@@ -7,7 +7,10 @@ function badge(t) {
   const s = status(t), d = daysLeft(t);
   if (s === 'late') return `<span class="badge late">${emo('🚨')}En retard · ${-d} j</span>`;
   if (s === 'soon') return `<span class="badge soon">${emo('⚠️')}${d === 0 ? "Fin aujourd'hui" : 'J-' + d}</span>`;
-  if (s === 'done') return `<span class="badge done">${emo('✅')}Terminé</span>`;
+  if (s === 'done') {
+    const le = disparitionLe(t);
+    return `<span class="badge done" ${le ? `title="Disparaîtra de l'écran ${esc(le)}"` : ''}>${emo('✅')}Terminé</span>`;
+  }
   return '';
 }
 function who(t) {
@@ -212,12 +215,13 @@ function vNewGroup() {
   <fieldset class="field"><legend>Couleur</legend><div class="pick">${colors.map((c, i) => `<label><input type="radio" name="g-color" value="${esc(c)}" ${c === color ? 'checked' : ''} aria-label="Couleur ${i + 1}"><span class="swatch" style="--c:${esc(c)}"></span></label>`).join('')}</div></fieldset>
   <div class="actions"><button type="button" class="btn" data-act="cancel-form">Annuler</button><button class="btn primary">${g ? 'Enregistrer' : 'Créer le groupe'}</button></div>
  </form>
- <div class="panel" style="margin-top:16px"><h3>Groupes existants</h3><ul class="glist">${editable.map(x => {
+ <div class="panel" style="margin-top:16px"><h3>Groupes existants</h3><ul class="glist">${editable.map((x, i) => {
     const n = S.tasks.filter(t => t.groupId === x.id).length;
+    const fleches = admin ? `<button class="del" data-act="grp-move" data-id="${esc(x.id)}" data-dir="-1" aria-label="Monter ${esc(x.name)}" ${i === 0 ? 'disabled' : ''}>${ic('up')}</button><button class="del" data-act="grp-move" data-id="${esc(x.id)}" data-dir="1" aria-label="Descendre ${esc(x.name)}" ${i === editable.length - 1 ? 'disabled' : ''}>${ic('down')}</button>` : '';
     return `<li><span class="gtile ${x.icon.startsWith('img:') ? 'img' : ''}" style="--g:${esc(x.color)}">${gIcon(x.icon, '')}</span><b>${groupName(x)}</b>${avStack(x.members || [])}<span class="hint">${plural(n, 'tâche')}</span>
-  <button class="del" data-act="edit-group" data-id="${esc(x.id)}" aria-label="Modifier ${esc(x.name)}">${ic('edit')}</button>${n ? '' : `<button class="del" data-act="del-group" data-id="${esc(x.id)}" aria-label="Supprimer ${esc(x.name)}">${ic('trash')}</button>`}</li>`;
+  ${fleches}<button class="del" data-act="edit-group" data-id="${esc(x.id)}" aria-label="Modifier ${esc(x.name)}">${ic('edit')}</button>${n ? '' : `<button class="del" data-act="del-group" data-id="${esc(x.id)}" aria-label="Supprimer ${esc(x.name)}">${ic('trash')}</button>`}</li>`;
   }).join('') || '<li class="hint">Aucun groupe pour l\'instant.</li>'}</ul>
-  <p class="hint" style="margin-top:10px">Un groupe ne peut être supprimé que s'il ne contient plus de tâche.</p></div></section>`;
+  <p class="hint" style="margin-top:10px">Un groupe ne peut être supprimé que s'il ne contient plus de tâche.${admin ? ' Les flèches ↑ ↓ changent l\'ordre des groupes sur l\'accueil et la timeline, pour tout le monde.' : ''}</p></div></section>`;
 }
 
 /* ---------- Catégories ---------- */
@@ -331,4 +335,54 @@ function vClaude() {
    <div class="data-btns"><span class="rolechip ${cx.actif ? 'admin' : ''}">${cx.actif ? 'Activé' : 'Désactivé'}</span>
    <button class="btn sm ${cx.actif ? '' : 'primary'}" data-act="connecteur" data-on="${cx.actif ? 0 : 1}">${cx.actif ? 'Désactiver' : 'Activer le connecteur ChatGPT'}</button></div></div>` : ''}
   </div>`;
+}
+
+/* ---------- Historique des tâches terminées (administrateur) ---------- */
+// Horodatage serveur (UTC) → « 22/10/2026 14:05 »
+function stampFr(s) {
+  const d = new Date(String(s).replace(' ', 'T') + 'Z');
+  return isNaN(d) ? '' : d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+function histFiltre() {
+  const list = (ui.hist && ui.hist.tasks) || [];
+  if (!ui.histQ) return list;
+  const words = norm(ui.histQ).split(/\s+/).filter(Boolean);
+  return list.filter(t => {
+    const h = norm([t.title, t.desc, t.group.name, catById(t.type).label, t.ownerId ? userById(t.ownerId).name : '', t.doneBy ? userById(t.doneBy).name : '',
+      ...t.steps.map(s => s.label + ' ' + (s.doneBy ? userById(s.doneBy).name : ''))].join(' '));
+    return words.every(w => h.includes(w));
+  });
+}
+function histListe() {
+  const list = histFiltre();
+  if (!ui.hist) return '<li class="hint none">Chargement…</li>';
+  if (!list.length) return `<li class="hint none">${ui.hist.tasks.length ? 'Aucune tâche terminée ne correspond à cette recherche.' : 'Aucune tâche terminée pour l\'instant.'}</li>`;
+  return list.map(t => {
+    const cat = catById(t.type);
+    return `<li><details><summary>
+      <span class="h-date">${esc(stampFr(t.doneAt))}</span>
+      <span class="h-titre">${emo(cat.emoji)}<b>${esc(t.title)}</b></span>
+      <span class="h-grp">${gIcon(t.group.icon, '')}${esc(t.group.name)}</span>
+      <span class="h-qui">Validée par <b>${t.doneBy ? esc(userById(t.doneBy).name) : '—'}</b></span>
+      ${t.archived ? '<span class="rolechip">Archivée</span>' : '<span class="rolechip admin">Encore affichée</span>'}
+    </summary>
+    <div class="h-detail">
+      <p class="hint">Pour : ${t.ownerId ? esc(userById(t.ownerId).name) : 'Tout le groupe'} · du ${fmt(t.start)} au ${fmt(t.end)} · ${esc(cat.label)}</p>
+      ${t.desc ? `<p class="desc">${esc(t.desc)}</p>` : ''}
+      ${t.steps.length ? `<ol class="h-steps">${t.steps.map(s => `<li><span>${esc(s.label)}</span><span class="qui">${s.done ? `${ic('check', 'sm')}${s.doneBy ? esc(userById(s.doneBy).name) : '—'}${s.doneAt ? ' · ' + esc(stampFr(s.doneAt)) : ''}` : 'non cochée'}</span></li>`).join('')}</ol>` : '<p class="hint">Tâche sans étapes.</p>'}
+    </div></details></li>`;
+  }).join('');
+}
+function vHistorique() {
+  if (!isAdmin()) return '<div class="panel"><p class="hint">Réservé à l\'administrateur.</p></div>';
+  const n = ui.hist ? ui.hist.tasks.length : 0;
+  return `<section class="page-head"><div><p class="eyebrow">Administrateur</p><h1>Historique des tâches terminées</h1></div>
+   <div class="stats"><span class="stat">${emo('✅')}<b>${n}</b>terminée${n > 1 ? 's' : ''}</span></div></section>
+  <p class="note" style="margin-bottom:14px">Une tâche terminée reste affichée ${S.archiveJours || 7} jours sur l'accueil et la timeline, puis elle n'apparaît plus qu'ici. Cliquez sur une ligne pour voir ses étapes, qui les a validées et quand.</p>
+  <div class="toolbar">
+   <label class="searchbox">${ic('search')}<input type="search" id="h-q" value="${esc(ui.histQ)}" placeholder="Rechercher (tâche, client, personne…)" aria-label="Rechercher dans l'historique"></label>
+   <button class="btn sm" data-act="hist-csv">${ic('download', 'sm')}Exporter (Excel)</button>
+  </div>
+  ${ui.hist && ui.hist.error ? `<p class="err">${esc(ui.hist.error)}</p>` : ''}
+  <ul class="hist" id="hist-list">${histListe()}</ul>`;
 }

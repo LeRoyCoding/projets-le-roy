@@ -117,7 +117,26 @@ const MIGRATIONS = [
      token_hash TEXT NOT NULL UNIQUE,
      created_at TEXT NOT NULL DEFAULT (datetime('now')),
      last_used TEXT
-   );`
+   );`,
+
+  // 7 — ordre des groupes, qui a terminé une tâche et quand, qui a coché une étape et quand
+  `ALTER TABLE groupes ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
+   UPDATE groupes SET position = (
+     SELECT rn FROM (
+       SELECT g.id, ROW_NUMBER() OVER (
+         ORDER BY (SELECT COUNT(*) FROM group_members m WHERE m.group_id = g.id) > 1 DESC, g.created_at, g.name) AS rn
+       FROM groupes g) x
+     WHERE x.id = groupes.id);
+   ALTER TABLE tasks ADD COLUMN done_at TEXT;
+   ALTER TABLE tasks ADD COLUMN done_by TEXT REFERENCES users(id) ON DELETE SET NULL;
+   ALTER TABLE steps ADD COLUMN done_at TEXT;
+   ALTER TABLE steps ADD COLUMN done_by TEXT REFERENCES users(id) ON DELETE SET NULL;
+   -- Tâches déjà terminées : date connue approximativement (dernière modification), auteur inconnu.
+   UPDATE tasks SET done_at = updated_at
+     WHERE (completed = 1 AND NOT EXISTS (SELECT 1 FROM steps s WHERE s.task_id = tasks.id))
+        OR (EXISTS (SELECT 1 FROM steps s WHERE s.task_id = tasks.id)
+            AND NOT EXISTS (SELECT 1 FROM steps s WHERE s.task_id = tasks.id AND s.done = 0));
+   CREATE INDEX tasks_done ON tasks(done_at);`
 ];
 
 // backupDir : si la base doit être mise à jour, une copie de sécurité y est faite avant.

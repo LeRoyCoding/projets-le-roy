@@ -38,7 +38,8 @@ module.exports = function (app, { db, auth, adminOnly, handle, q }) {
         // Chaque utilisateur reçoit son groupe privé « Perso ».
         const n = db.prepare('SELECT COUNT(*) AS n FROM groupes').get().n;
         const gid = newId();
-        db.prepare('INSERT INTO groupes (id, name, icon, color) VALUES (?, ?, ?, ?)').run(gid, 'Perso', '🏡', GROUP_COLORS[2 + (n % 4)]);
+        const pos = db.prepare('SELECT COALESCE(MAX(position), 0) + 1 AS p FROM groupes').get().p;
+        db.prepare('INSERT INTO groupes (id, name, icon, color, position) VALUES (?, ?, ?, ?, ?)').run(gid, 'Perso', '🏡', GROUP_COLORS[2 + (n % 4)], pos);
         db.prepare('INSERT INTO group_members (group_id, user_id) VALUES (?, ?)').run(gid, id);
       }
     });

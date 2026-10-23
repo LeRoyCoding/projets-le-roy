@@ -1,12 +1,13 @@
 // Affichage général, clics, formulaires, temps réel et démarrage.
 'use strict';
 
-const VIEWS = { login: vLogin, home: vHome, timeline: vTimeline, newTask: vNewTask, newGroup: vNewGroup, categories: vCategories, account: vAccount };
+const VIEWS = { login: vLogin, home: vHome, timeline: vTimeline, newTask: vNewTask, newGroup: vNewGroup, categories: vCategories, historique: vHistorique, account: vAccount };
 
 function render() {
   const me = cur(); if (!me) ui.view = 'login'; else if (ui.view === 'login') ui.view = 'home';
   const v = ui.view;
-  const tabs = [['home', 'Accueil'], ['timeline', 'Timeline'], ['newTask', 'Tâche', 1], ['newGroup', 'Groupe', 1], ['categories', 'Catégories'], ['account', 'Compte']];
+  const tabs = [['home', 'Accueil'], ['timeline', 'Timeline'], ['newTask', 'Tâche', 1], ['newGroup', 'Groupe', 1], ['categories', 'Catégories'],
+    ...(me && me.role === 'admin' ? [['historique', 'Historique']] : []), ['account', 'Compte']];
   const editing = (v === 'newTask' && (ui.editId || ui.dupFrom)) || (v === 'newGroup' && ui.editGroup);
   $('#hdr').innerHTML = `<div class="brandbar"><div class="wrap"><div class="logo"><span class="logo-pill"><img src="${IMG.full}" alt="Le Roy – Lead Le Roy Concept"></span><span class="app">Projets</span></div>
   ${me ? `<button class="me" data-act="nav" data-v="account"><span class="av">${ini(me)}</span><span class="nm">${esc(me.name)}</span>${me.role === 'admin' ? '<span class="role-tag">Admin</span>' : ''}</button>` : ''}</div></div>
@@ -36,6 +37,7 @@ function go(v, keep) {
   if (!keep) { ui.editId = null; ui.dupFrom = null; ui.editGroup = null; ui.presetGroup = null; }
   if (v !== 'account') ui.newKey = null;
   if (v === 'account') loadKeys();
+  if (v === 'historique') loadHistorique();
   render(); window.scrollTo(0, 0);
 }
 function openTask(id) {
@@ -51,6 +53,17 @@ async function act(fn, okMsg) {
   try { await fn(); await refresh(); if (ui.openTask) await loadDetails(); render(); if (okMsg) toast(okMsg); return true; }
   catch (e) { toast(e.message); return false; }
   finally { ui.busy = false; }
+}
+async function loadHistorique() {
+  try { ui.hist = await api('GET', '/api/historique'); } catch (e) { ui.hist = { tasks: [], error: e.message }; }
+  if (ui.view === 'historique') render();
+}
+function exportHistoriqueCsv() {
+  const cell = v => { const s = String(v ?? ''); return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const rows = histFiltre().map(t => [stampFr(t.doneAt), t.title, t.group.name, catById(t.type).label, t.ownerId ? userById(t.ownerId).name : 'Tout le groupe',
+    t.doneBy ? userById(t.doneBy).name : '—', t.steps.length, t.archived ? 'Archivée' : 'Encore affichée']);
+  const csv = '\ufeff' + [['Terminée le', 'Tâche', 'Groupe', 'Catégorie', 'Pour qui', 'Validée par', 'Étapes', 'État'], ...rows].map(r => r.map(cell).join(';')).join('\r\n');
+  downloadFile(`historique-taches-${iso(today())}.csv`, csv, 'text/csv;charset=utf-8');
 }
 async function loadKeys() {
   try { ui.keys = (await api('GET', '/api/tokens')).tokens; if (ui.view === 'account') render(); } catch { /* sans importance */ }
@@ -71,6 +84,7 @@ function liveUpdate() {
   liveT = setTimeout(async () => {
     if (!S) return;
     try { await refresh(); if (ui.openTask) await loadDetails(); } catch { return; }
+    if (ui.view === 'historique') loadHistorique();
     // Pas de réaffichage complet pendant une saisie, pour ne pas effacer ce qui est en cours d'écriture.
     const a = document.activeElement;
     const typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !$('#modal').contains(a) && a.id !== 'q';
@@ -126,10 +140,15 @@ document.addEventListener('click', async e => {
       // Affichage immédiat (utile sur tablette), puis enregistrement ; retour en arrière en cas d'erreur.
       const s = t && t.steps.find(x => x.id === b.dataset.s); if (!s) break;
       const wasDone = pct(t) === 100;
-      s.done = !s.done; render();
+      s.done = !s.done;
+      s.doneBy = s.done ? S.me : null; s.doneAt = s.done ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
+      // La tâche vient d'être terminée (ou rouverte) : affichage immédiat de « Terminée par… ».
+      if (!wasDone && pct(t) === 100) { t.doneBy = S.me; t.doneAt = s.doneAt; }
+      if (wasDone && pct(t) < 100) { t.doneBy = null; t.doneAt = null; }
+      render();
       if (!wasDone && pct(t) === 100) toast('Tâche terminée 🎉');
       try { await api('PATCH', '/api/steps/' + s.id, { done: s.done }); }
-      catch (err) { s.done = !s.done; render(); toast(err.message); }
+      catch (err) { s.done = !s.done; s.doneBy = null; s.doneAt = null; render(); toast(err.message); }
       break;
     }
     case 'toggle-completed':
@@ -187,6 +206,14 @@ document.addEventListener('click', async e => {
       await act(() => api('PUT', '/api/categories/' + id, { label: c.label, emoji: c.emoji, hidden: !c.hidden }), c.hidden ? 'Catégorie affichée' : 'Catégorie masquée');
       break;
     }
+    case 'grp-move': {
+      const ids = S.groups.map(g => g.id), i = ids.indexOf(id), j = i + Number(b.dataset.dir);
+      if (j < 0 || j >= ids.length) break;
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+      await act(() => api('POST', '/api/groups/ordre', { ids }));
+      break;
+    }
+    case 'hist-csv': exportHistoriqueCsv(); break;
     case 'cat-move': {
       const ids = S.categories.map(c => c.id), i = ids.indexOf(id), j = i + Number(b.dataset.dir);
       if (j < 0 || j >= ids.length) break;
@@ -223,6 +250,7 @@ document.addEventListener('click', async e => {
 let searchT;
 document.addEventListener('input', e => {
   if (e.target.id === 'q') { clearTimeout(searchT); searchT = setTimeout(() => { ui.search = e.target.value.trim(); renderResults(); }, 120); }
+  if (e.target.id === 'h-q') { ui.histQ = e.target.value.trim(); $('#hist-list').innerHTML = histListe(); }
 });
 document.addEventListener('change', e => {
   const el = e.target;

@@ -281,7 +281,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand);b
 .glist b{margin-right:auto}
 
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:6px;font-weight:600;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
-@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(8px);opacity:.4}}}
+@media (prefers-reduced-motion:no-preference){.sheet.anim{animation:up .18s ease-out}@keyframes up{from{transform:translateY(8px);opacity:.4}}}
 
 /* Ajouts pour la version serveur */
 body{margin:0}
@@ -379,3 +379,24 @@ button.stat.on b{color:var(--bg)}
 .connecteur h4{margin:0;font-family:var(--f-display);font-size:17px;text-transform:uppercase;letter-spacing:.04em}
 .connecteur .hint{margin:0}
 .data-btns .rolechip{align-self:center}
+
+/* Qui a validé, historique */
+.step .qui,.h-steps .qui{margin:3px 0 0;font-size:12px;color:var(--ok);display:inline-flex;align-items:center;gap:4px;font-weight:500}
+.step .qui .ic{width:13px;height:13px;stroke-width:2.6}
+.valide{margin:-4px 0 14px;font-size:14px;background:var(--ok-bg);color:var(--ok);padding:6px 10px;border-radius:6px;display:inline-block}
+.hist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.hist>li>details{background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
+.hist summary{display:grid;grid-template-columns:150px minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 14px;cursor:pointer;list-style:none}
+.hist summary::-webkit-details-marker{display:none}
+.hist .h-date{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.hist .h-titre,.hist .h-grp{display:inline-flex;align-items:center;gap:8px;min-width:0}
+.hist .h-titre b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist .h-grp{font-size:13px;color:var(--muted)}
+.hist .h-grp img{height:16px;width:auto;background:#fff;border-radius:2px}
+.hist .h-qui{font-size:13px;color:var(--muted)}
+.h-detail{padding:4px 16px 14px;border-top:1px solid var(--line)}
+.h-steps{margin:6px 0 0;padding-left:22px;display:grid;gap:6px;font-size:14px}
+.h-steps li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px}
+.h-steps .qui{margin:0}
+.hist li.none{padding:12px}
+@media (max-width:760px){.hist summary{grid-template-columns:1fr;gap:4px}}

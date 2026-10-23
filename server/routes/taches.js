@@ -1,7 +1,7 @@
 // Tâches, étapes, commentaires et historique.
 const { fail, str, isDate, newId } = require('../outils');
 
-module.exports = function (app, { db, auth, handle, q }) {
+module.exports = function (app, { db, auth, adminOnly, handle, q }) {
   // Historique : qui a fait quoi sur une tâche.
   const log = (taskId, userId, action, detail = '') =>
     db.prepare('INSERT INTO activity (task_id, user_id, action, detail) VALUES (?, ?, ?, ?)').run(taskId, userId, action, String(detail).slice(0, 300));
@@ -47,7 +47,7 @@ module.exports = function (app, { db, auth, handle, q }) {
     return { title, desc, type, start: b.start, end: b.end, groupId: g.id, ownerId, steps, completed: b.completed ? 1 : 0 };
   }
 
-  function writeSteps(taskId, steps) {
+  function writeSteps(taskId, steps, userId) {
     const existing = new Set(db.prepare('SELECT id FROM steps WHERE task_id = ?').all(taskId).map(r => r.id));
     const keep = new Set();
     steps.forEach((s, i) => {
@@ -55,7 +55,8 @@ module.exports = function (app, { db, auth, handle, q }) {
         db.prepare('UPDATE steps SET position = ?, label = ?, description = ?, done = ? WHERE id = ?').run(i, s.label, s.desc, s.done ? 1 : 0, s.id);
         keep.add(s.id);
       } else {
-        db.prepare('INSERT INTO steps (id, task_id, position, label, description, done) VALUES (?, ?, ?, ?, ?, ?)').run(newId(), taskId, i, s.label, s.desc, s.done ? 1 : 0);
+        db.prepare(`INSERT INTO steps (id, task_id, position, label, description, done, done_by, done_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ${s.done ? "datetime('now')" : 'NULL'})`).run(newId(), taskId, i, s.label, s.desc, s.done ? 1 : 0, s.done ? userId : null);
       }
     });
     for (const id of existing) if (!keep.has(id)) db.prepare('DELETE FROM steps WHERE id = ?').run(id);
@@ -83,7 +84,8 @@ module.exports = function (app, { db, auth, handle, q }) {
     db.tx(() => {
       db.prepare(`INSERT INTO tasks (id, group_id, owner_id, type, title, description, start_date, end_date, created_by, completed)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, d.groupId, d.ownerId, d.type, d.title, d.desc, d.start, d.end, req.me.id, d.steps.length ? 0 : d.completed);
-      writeSteps(id, d.steps);
+      writeSteps(id, d.steps, req.me.id);
+      q.majTerminee(id, req.me.id);
       log(id, req.me.id, 'creation');
     });
     return { id };
@@ -96,7 +98,8 @@ module.exports = function (app, { db, auth, handle, q }) {
     db.tx(() => {
       db.prepare(`UPDATE tasks SET group_id = ?, owner_id = ?, type = ?, title = ?, description = ?, start_date = ?, end_date = ?,
         completed = ?, updated_at = datetime('now') WHERE id = ?`).run(d.groupId, d.ownerId, d.type, d.title, d.desc, d.start, d.end, d.steps.length ? 0 : d.completed, t.id);
-      writeSteps(t.id, d.steps);
+      writeSteps(t.id, d.steps, req.me.id);
+      q.majTerminee(t.id, req.me.id);
       const changes = describeChanges(t, d);
       if (before.length !== d.steps.length || before.some((s, i) => s.label !== d.steps[i].label)) changes.push('étapes');
       if (changes.length) log(t.id, req.me.id, 'modification', changes.join(', '));
@@ -112,8 +115,11 @@ module.exports = function (app, { db, auth, handle, q }) {
   app.patch('/api/tasks/:id/terminee', auth, handle(req => {
     const t = q.editableTask(req.me, req.params.id);
     const done = req.body.completed ? 1 : 0;
-    db.prepare("UPDATE tasks SET completed = ?, updated_at = datetime('now') WHERE id = ?").run(done, t.id);
-    log(t.id, req.me.id, done ? 'terminee' : 'rouverte');
+    db.tx(() => {
+      db.prepare("UPDATE tasks SET completed = ?, updated_at = datetime('now') WHERE id = ?").run(done, t.id);
+      q.majTerminee(t.id, req.me.id);
+      log(t.id, req.me.id, done ? 'terminee' : 'rouverte');
+    });
   }, { notify: true }));
 
   // Détails affichés dans la fiche : commentaires et historique.
@@ -123,8 +129,34 @@ module.exports = function (app, { db, auth, handle, q }) {
     return {
       comments: db.prepare(`SELECT c.id, c.body, c.created_at AS at, c.user_id AS userId FROM comments c
         WHERE c.task_id = ? ORDER BY c.created_at, c.rowid`).all(t.id),
-      activity: db.prepare(`SELECT a.action, a.detail, a.created_at AS at, a.user_id AS userId FROM activity a
-        WHERE a.task_id = ? ORDER BY a.id DESC LIMIT 100`).all(t.id)
+      // Le journal « qui a fait quoi » est réservé à l'administrateur.
+      activity: req.me.role === 'admin'
+        ? db.prepare(`SELECT a.action, a.detail, a.created_at AS at, a.user_id AS userId FROM activity a
+            WHERE a.task_id = ? ORDER BY a.id DESC LIMIT 100`).all(t.id)
+        : []
+    };
+  }));
+
+  /* ---------- Historique des tâches terminées (administrateur) ---------- */
+  app.get('/api/historique', auth, adminOnly, handle(() => {
+    const tasks = db.prepare(`SELECT t.*, g.name AS group_name, g.icon AS group_icon, g.color AS group_color
+      FROM tasks t LEFT JOIN groupes g ON g.id = t.group_id WHERE t.done_at IS NOT NULL ORDER BY t.done_at DESC LIMIT 1000`).all();
+    const steps = {};
+    if (tasks.length) {
+      const ids = tasks.map(t => t.id);
+      for (const s of db.prepare(`SELECT * FROM steps WHERE task_id IN (${ids.map(() => '?').join(',')}) ORDER BY position, rowid`).all(...ids)) {
+        (steps[s.task_id] ||= []).push({ id: s.id, label: s.label, desc: s.description, done: !!s.done, doneBy: s.done_by, doneAt: s.done_at });
+      }
+    }
+    return {
+      jours: q.ARCHIVE_JOURS,
+      tasks: tasks.map(t => ({
+        id: t.id, title: t.title, desc: t.description, type: t.type, ownerId: t.owner_id, groupId: t.group_id,
+        group: { name: t.group_name || 'Groupe supprimé', icon: t.group_icon || '📁', color: t.group_color || '#666A6F' },
+        start: t.start_date, end: t.end_date, doneAt: t.done_at, doneBy: t.done_by,
+        archived: !!db.prepare(`SELECT 1 FROM tasks x WHERE x.id = ? AND NOT ${q.nonArchivee('x')}`).get(t.id),
+        steps: steps[t.id] || []
+      }))
     };
   }));
 
@@ -138,6 +170,7 @@ module.exports = function (app, { db, auth, handle, q }) {
     db.tx(() => {
       db.prepare('INSERT INTO steps (id, task_id, position, label, description) VALUES (?, ?, ?, ?, ?)').run(id, t.id, pos, label, desc);
       db.prepare('UPDATE tasks SET completed = 0 WHERE id = ?').run(t.id);
+      q.majTerminee(t.id, req.me.id);
       q.touch(t.id);
       log(t.id, req.me.id, 'etape_ajoutee', label);
     });
@@ -149,7 +182,10 @@ module.exports = function (app, { db, auth, handle, q }) {
     const done = req.body.done ? 1 : 0;
     if (done === step.done) return;
     db.tx(() => {
-      db.prepare('UPDATE steps SET done = ? WHERE id = ?').run(done, step.id);
+      // On note qui a coché l'étape et quand (effacé si on la décoche).
+      if (done) db.prepare("UPDATE steps SET done = 1, done_by = ?, done_at = datetime('now') WHERE id = ?").run(req.me.id, step.id);
+      else db.prepare('UPDATE steps SET done = 0, done_by = NULL, done_at = NULL WHERE id = ?').run(step.id);
+      q.majTerminee(step.task_id, req.me.id);
       q.touch(step.task_id);
       log(step.task_id, req.me.id, done ? 'etape_cochee' : 'etape_decochee', step.label);
     });
@@ -159,6 +195,7 @@ module.exports = function (app, { db, auth, handle, q }) {
     const { step } = q.editableStep(req.me, req.params.id);
     db.tx(() => {
       db.prepare('DELETE FROM steps WHERE id = ?').run(step.id);
+      q.majTerminee(step.task_id, req.me.id);
       q.touch(step.task_id);
       log(step.task_id, req.me.id, 'etape_supprimee', step.label);
     });
