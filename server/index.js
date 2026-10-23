@@ -11,7 +11,9 @@ const DATA_DIR = path.join(ROOT, 'donnees');
 const DB_FILE = process.env.DB_FILE || path.join(DATA_DIR, DEMO ? 'demo.sqlite' : 'projets.sqlite');
 const BACKUP_DIR = path.join(ROOT, 'sauvegardes');
 
-const db = open(DB_FILE);
+let db;
+try { db = open(DB_FILE, { backupDir: DEMO ? null : BACKUP_DIR }); }
+catch (e) { console.error('\n  Impossible d\'ouvrir la base de données : ' + e.message + '\n'); process.exit(1); }
 if (DEMO) require('./demo').seed(db);
 else startDailyBackup(db, BACKUP_DIR);
 

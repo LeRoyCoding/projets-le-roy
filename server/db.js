@@ -120,7 +120,8 @@ const MIGRATIONS = [
    );`
 ];
 
-function open(file) {
+// backupDir : si la base doit être mise à jour, une copie de sécurité y est faite avant.
+function open(file, { backupDir = null } = {}) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const db = new DatabaseSync(file);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
@@ -132,6 +133,16 @@ function open(file) {
   };
 
   const version = db.prepare('PRAGMA user_version').get().user_version;
+  if (version > MIGRATIONS.length) {
+    db.close(); // libère le fichier (sous Windows, un fichier ouvert reste verrouillé)
+    throw new Error(`Cette base de données vient d'une version plus récente de l'application (schéma ${version}). Lancez mettre-a-jour.bat.`);
+  }
+  if (version > 0 && version < MIGRATIONS.length && backupDir) {
+    // Copie de sécurité avant de transformer une base existante.
+    fs.mkdirSync(backupDir, { recursive: true });
+    const target = path.join(backupDir, `avant-mise-a-jour-${todayIso()}-schema${version}.sqlite`);
+    if (!fs.existsSync(target)) db.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
+  }
   for (let v = version; v < MIGRATIONS.length; v++) {
     db.tx(() => {
       db.exec(MIGRATIONS[v]);
@@ -175,4 +186,4 @@ function startDailyBackup(db, dir, keep = 60) {
   setInterval(run, 60 * 60 * 1000).unref();
 }
 
-module.exports = { open, newId, startDailyBackup, ROOT };
+module.exports = { open, newId, startDailyBackup, ROOT, MIGRATIONS };

@@ -64,7 +64,9 @@ function taskRow(t) {
 function homeStats(tasks) {
   const open = tasks.filter(t => status(t) !== 'done');
   const soon = tasks.filter(t => status(t) === 'soon').length, late = tasks.filter(t => status(t) === 'late').length;
-  return `<span class="stat">${emo('📌')}<b>${open.length}</b>en cours</span><span class="stat">${emo('⚠️')}<b>${soon}</b>sous 7 jours</span><span class="stat">${emo('🚨')}<b>${late}</b>en retard</span>`;
+  // Un clic sur un compteur n'affiche que ces tâches ; un second clic annule.
+  const stat = (id, e, n, label) => `<button class="stat ${ui.statusFilter === id ? 'on' : ''}" data-act="stat-filter" data-id="${id}" aria-pressed="${ui.statusFilter === id}" title="${ui.statusFilter === id ? 'Tout afficher' : 'N\'afficher que celles-ci'}">${emo(e)}<b>${n}</b>${label}</button>`;
+  return stat('open', '📌', open.length, 'en cours') + stat('soon', '⚠️', soon, 'sous 7 jours') + stat('late', '🚨', late, 'en retard');
 }
 function homeResults() {
   const me = cur(), admin = isAdmin(), tasks = visibleTasks();
