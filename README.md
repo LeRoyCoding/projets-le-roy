@@ -8,6 +8,7 @@ Les collègues l'ouvrent dans leur navigateur depuis le même Wi-Fi, sans rien i
 - 📖 **Mode d'emploi pour l'équipe** : [docs/guide-utilisateur.md](docs/guide-utilisateur.md)
 - 🤖 **Lier l'application à Claude** : [docs/lier-a-claude.md](docs/lier-a-claude.md) · **à ChatGPT** : [docs/lier-a-chatgpt.md](docs/lier-a-chatgpt.md)
 - 🔎 **Rapport d'audit et améliorations** : [docs/audit.md](docs/audit.md)
+- 🧭 **Ce qui manque encore (feuille de route)** : [docs/feuille-de-route.md](docs/feuille-de-route.md)
 - 📄 **Guides Word à imprimer** : [docs/Guide-installation-Projets-Le-Roy.docx](docs/Guide-installation-Projets-Le-Roy.docx) et [docs/Guide-utilisation-Projets-Le-Roy.docx](docs/Guide-utilisation-Projets-Le-Roy.docx)
 
 ---

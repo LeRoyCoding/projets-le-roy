@@ -39,14 +39,20 @@ function seed(db) {
       ['llc', null, 'commercial', 'Plaquette Lead Le Roy Concept', -5, 15, '4 pages : concept, références, contact. Tâche commune LLC.', [['Textes'], ['Photos de réalisations'], ['Mise en page'], ['Validation et impression']], 2],
       ['llc', 'Antoine', 'dev', 'Agent devis CSV – chaîne plate', -8, 25, 'Générer le CSV d\'import BC depuis le configurateur.', [['Format CSV Business Central', 'Colonnes et références'], ['Règles de la chaîne plate'], ['Tests sur 3 devis réels'], ['Étendre aux autres configurateurs'], ['Documentation']], 1],
       ['p1', 'Antoine', 'perso', 'Révision voiture', 1, 5, '', [['Prendre rendez-vous'], ['Déposer le véhicule']], 0],
-      ['p2', 'Claire', 'perso', 'Inscription formation anglais', -4, 18, '', [['Comparer les organismes'], ['Demande de prise en charge'], ['Inscription']], 1]
+      ['p2', 'Claire', 'perso', 'Inscription formation anglais', -4, 18, '', [['Comparer les organismes'], ['Demande de prise en charge'], ['Inscription']], 1],
+      // Tâches terminées : l'une encore affichée (il y a 2 jours), l'autre archivée (il y a 12 jours)
+      ['lr', 'Julien', 'chantier', 'Pose pondoirs – élevage Morel', -30, -3, 'Installation de 2 lignes de pondoirs automatiques.', [['Livraison du matériel'], ['Pose des lignes'], ['Réception avec l\'éleveur']], 3, 2],
+      ['lr', 'Claire', 'devis', 'Devis abreuvoirs – GAEC du Moulin', -40, -12, 'Variante pipettes inox.', [['Relevé des besoins'], ['Chiffrage'], ['Envoi du devis']], 3, 12]
     ];
-    for (const [g, owner, type, title, s, e, desc, steps, done] of T) {
+    for (const [g, owner, type, title, s, e, desc, steps, done, finiIlYa] of T) {
       const id = newId();
       db.prepare('INSERT INTO tasks (id, group_id, owner_id, type, title, description, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
         .run(id, G[g], owner ? U[owner] : null, type, title, desc, day(s), day(e));
       steps.forEach(([label, d], i) =>
-        db.prepare('INSERT INTO steps (id, task_id, position, label, description, done) VALUES (?, ?, ?, ?, ?, ?)').run(newId(), id, i, label, d || '', i < done ? 1 : 0));
+        db.prepare(`INSERT INTO steps (id, task_id, position, label, description, done, done_by, done_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, CASE WHEN ? THEN datetime('now', ?) END)`).run(newId(), id, i, label, d || '', i < done ? 1 : 0, i < done && owner ? U[owner] : null,
+          i < done ? 1 : 0, `-${(finiIlYa || 0) + (steps.length - i)} days`));
+      if (finiIlYa) db.prepare("UPDATE tasks SET done_at = datetime('now', ?), done_by = ? WHERE id = ?").run(`-${finiIlYa} days`, U[owner], id);
     }
   });
   console.log('  Données d\'exemple créées (mot de passe des comptes : 0000, Administrateur : admin).');

@@ -74,5 +74,8 @@ Reproduire fidèlement ce rendu. Ne pas réinventer le design.
 - Serveur : `server/index.js` (démarrage), `server/app.js` (application, sécurité, connexion par cookie ou clé d'accès), `server/routes/*.js` (une route par thème), `server/requetes.js` (règles d'accès), `server/db.js` (migrations numérotées : toujours **ajouter** une migration, ne jamais modifier une migration publiée).
 - Interface : `public/js/base.js` (outils), `regles.js` (état et règles), `ecrans.js` (écrans), `fiche.js` (fiche tâche), `actions.js` (évènements, temps réel).
 - Connecteurs IA : outils partagés `outils/mcp-commun.js`. Claude : `outils/claude-mcp.js` + `lier-a-claude.bat`. ChatGPT : `server/mcp-http.js` (port 3001, 127.0.0.1 uniquement, activé par l'admin) + `ouvrir-pour-chatgpt.bat` (tunnel Cloudflare vers ce seul port). C'est la seule exception, voulue par l'utilisateur, à la règle « réseau local uniquement ».
+- Tâches terminées : `tasks.done_at` / `done_by` (qui a terminé, quand) et `steps.done_at` / `done_by` (qui a coché). Une tâche terminée depuis plus de 7 jours n'est plus envoyée à l'écran (`q.nonArchivee`) ; l'admin la retrouve dans l'onglet « Historique » (`/api/historique`). Le journal d'activité d'une tâche est réservé à l'admin.
+- Ordre des groupes : `groupes.position`, réglé par l'admin (`/api/groups/ordre`).
+- Feuille de route : `docs/feuille-de-route.md`.
 - Tests : `npm test` (dossier `tests/`), relancés par GitHub Actions sous Windows et Linux. Les faire passer avant chaque envoi.
 - Documentation : `README.md` (installation), `docs/guide-utilisateur.md`, `docs/lier-a-claude.md`, `docs/audit.md`.

@@ -136,7 +136,8 @@ function creerOutils(api) {
           `Groupe : ${c.groupLabel(c.group(t.groupId))} · Catégorie : ${cat.label} · Pour : ${t.ownerId ? c.userName(t.ownerId) : 'tout le groupe'}`,
           `Du ${frDate(t.start)} au ${frDate(t.end)} · Avancement ${pct(t)} % · ${STATUS_TXT[status(t)]}`,
           t.desc ? `\nDescription :\n${t.desc}` : '',
-          `\nÉtapes :\n` + (t.steps.map((s, i) => `${i + 1}. [${s.done ? 'x' : ' '}] ${s.label}${s.desc ? ' — ' + s.desc : ''}  (id ${s.id})`).join('\n') || '(aucune)'),
+          `\nÉtapes :\n` + (t.steps.map((s, i) => `${i + 1}. [${s.done ? 'x' : ' '}] ${s.label}${s.desc ? ' — ' + s.desc : ''}${s.done && s.doneBy ? ` (cochée par ${c.userName(s.doneBy)}${s.doneAt ? ' le ' + s.doneAt + ' UTC' : ''})` : ''}  (id ${s.id})`).join('\n') || '(aucune)'),
+        t.doneAt ? `\nTerminée par ${t.doneBy ? c.userName(t.doneBy) : '—'} le ${t.doneAt} UTC.` : '',
           d.comments.length ? `\nCommentaires :\n` + d.comments.map(x => `- ${c.userName(x.userId)} (${x.at} UTC) : ${x.body}`).join('\n') : '',
           d.activity.length ? `\nHistorique récent :\n` + d.activity.slice(0, 15).map(x => `- ${x.at} UTC · ${c.userName(x.userId)} · ${x.action}${x.detail ? ' : ' + x.detail : ''}`).join('\n') : ''
         ].filter(Boolean).join('\n');

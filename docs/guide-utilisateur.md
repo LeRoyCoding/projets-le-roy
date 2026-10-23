@@ -40,7 +40,9 @@ Cliquez sur une tâche pour ouvrir sa fiche :
 - **Ajouter une étape** : champ « Nouvelle étape » sous la liste.
 - **Tâche sans étapes** : un bouton **Terminée** permet de la clore (et **Rouvrir** pour revenir en arrière).
 - **Commentaires** : notez les échanges, relances, informations utiles. Toute l'équipe du groupe les voit.
-- **Historique** : qui a créé, coché, modifié quoi, et quand.
+- **Qui a validé** : sous chaque étape cochée, on voit qui l'a cochée et quand (« Validée par Claire · aujourd'hui 14:05 »).
+  Quand la dernière étape est cochée, la fiche indique qui a terminé la tâche.
+- **Historique de la tâche** (qui a créé, coché, modifié quoi) : visible par l'administrateur seulement.
 - **Dupliquer** : crée une nouvelle tâche à partir de celle-ci (pratique pour des devis qui se ressemblent).
 - **Modifier la tâche** / **Supprimer** (la suppression demande une confirmation).
 
@@ -56,6 +58,12 @@ Le bouton **+** d'une carte crée directement la tâche dans ce groupe.
 - **Description** : contexte, client, points d'attention.
 - **Étapes** : la liste des choses à faire. Les flèches ↑ ↓ changent leur ordre, la corbeille les retire.
 
+## Tâches terminées
+
+Une tâche terminée (✅) reste affichée **7 jours** sur l'accueil et la timeline, puis disparaît de l'écran.
+Elle n'est pas perdue : l'administrateur la retrouve dans l'onglet **Historique**, avec qui l'a validée et quand,
+et le détail de chaque étape. Si une étape est décochée avant ce délai, la tâche redevient « en cours ».
+
 ## La timeline
 
 Les tâches sous forme de barres, de la date de début à la date de fin. La partie foncée = l'avancement.
@@ -67,6 +75,8 @@ La recherche et les filtres de l'accueil marchent aussi ici.
 - **2 personnes ou plus** = groupe **commun** : chacun voit et fait avancer toutes ses tâches.
 - **1 personne** = groupe **privé** (comme votre « Perso »).
 - Choisissez un **logo** et une **couleur**. Un groupe ne peut être supprimé que s'il est vide.
+- **Ordre des groupes** (administrateur) : flèches ↑ ↓ dans la liste « Groupes existants ». L'ordre s'applique à
+  l'accueil et à la timeline de tout le monde.
 
 ## Les catégories
 
@@ -86,6 +96,9 @@ Onglet **Catégories** :
 - **Exporter les tâches (Excel)** : un fichier à ouvrir dans Excel avec les tâches affichées et leur avancement.
 
 ### Pour l'administrateur
+
+- **Historique** (onglet réservé à l'administrateur) : toutes les tâches terminées, la date, qui a validé la tâche
+  et chacune de ses étapes ; recherche et export Excel.
 
 - **Équipe** : ajouter une personne ; avec le crayon, la renommer, lui donner un **nouveau mot de passe**,
   changer son rôle, ou **désactiver** son compte (il ne peut plus se connecter, ses tâches restent).

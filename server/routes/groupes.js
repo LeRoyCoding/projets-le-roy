@@ -3,7 +3,7 @@ const { fail, str, newId } = require('../outils');
 
 const GROUP_COLORS = ['#C4122F', '#666A6F', '#2E8C76', '#D08A1E', '#3F7CC0', '#7A5AB5'];
 
-module.exports = function (app, { db, auth, handle, q }) {
+module.exports = function (app, { db, auth, adminOnly, handle, q }) {
   function readGroup(me, body) {
     const b = body || {};
     const name = str(b.name, 80, 'Le nom du groupe', true);
@@ -24,7 +24,8 @@ module.exports = function (app, { db, auth, handle, q }) {
     const d = readGroup(req.me, req.body);
     const id = newId();
     db.tx(() => {
-      db.prepare('INSERT INTO groupes (id, name, icon, color) VALUES (?, ?, ?, ?)').run(id, d.name, d.icon, d.color);
+      const pos = db.prepare('SELECT COALESCE(MAX(position), 0) + 1 AS p FROM groupes').get().p;
+      db.prepare('INSERT INTO groupes (id, name, icon, color, position) VALUES (?, ?, ?, ?, ?)').run(id, d.name, d.icon, d.color, pos);
       setMembers(id, d.members);
     });
     return { id };
@@ -37,6 +38,12 @@ module.exports = function (app, { db, auth, handle, q }) {
       db.prepare('UPDATE groupes SET name = ?, icon = ?, color = ? WHERE id = ?').run(d.name, d.icon, d.color, g.id);
       setMembers(g.id, d.members);
     });
+  }, { notify: true }));
+
+  // Ordre d'affichage des groupes (accueil, timeline, listes) : réglé par l'administrateur pour tout le monde.
+  app.post('/api/groups/ordre', auth, adminOnly, handle(req => {
+    const ids = Array.isArray(req.body.ids) ? req.body.ids.map(String) : fail(400, 'Ordre illisible.');
+    db.tx(() => ids.forEach((id, i) => db.prepare('UPDATE groupes SET position = ? WHERE id = ?').run(i + 1, id)));
   }, { notify: true }));
 
   app.delete('/api/groups/:id', auth, handle(req => {
