@@ -1,6 +1,5 @@
 // Démarre le serveur « Projets Le Roy » (npm start, ou npm run demo pour les données d'exemple).
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { open, startDailyBackup, ROOT } = require('./db');
 const { createApp } = require('./app');
@@ -20,8 +19,7 @@ else startDailyBackup(db, BACKUP_DIR);
 
 const app = createApp({ db, demo: DEMO, backupDir: BACKUP_DIR });
 
-const localAddresses = () => Object.values(os.networkInterfaces()).flat()
-  .filter(a => a && a.family === 'IPv4' && !a.internal).map(a => a.address);
+const { adressesReseau } = require('./outils');
 
 const server = app.listen(PORT, '0.0.0.0', () => {
   const pidFile = path.join(DATA_DIR, 'serveur.pid');
@@ -38,7 +36,8 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('   Projets Le Roy est démarré' + (DEMO ? ' (MODE DÉMO, données d\'exemple)' : ''));
   console.log('  ==============================================');
   console.log(`   Sur ce PC          : http://localhost:${PORT}`);
-  for (const ip of localAddresses()) console.log(`   Pour les collègues : http://${ip}:${PORT}`);
+  for (const url of adressesReseau(PORT)) console.log(`   Pour les collègues : ${url}`);
+  console.log(`   Fiche avec QR code à imprimer : http://localhost:${PORT}/acces`);
   console.log('');
   console.log('   Laissez cette fenêtre ouverte (vous pouvez la réduire).');
   console.log(`   Base de données : ${DB_FILE}`);

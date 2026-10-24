@@ -136,7 +136,10 @@ const MIGRATIONS = [
      WHERE (completed = 1 AND NOT EXISTS (SELECT 1 FROM steps s WHERE s.task_id = tasks.id))
         OR (EXISTS (SELECT 1 FROM steps s WHERE s.task_id = tasks.id)
             AND NOT EXISTS (SELECT 1 FROM steps s WHERE s.task_id = tasks.id AND s.done = 0));
-   CREATE INDEX tasks_done ON tasks(done_at);`
+   CREATE INDEX tasks_done ON tasks(done_at);`,
+
+  // 8 — priorité des tâches : 1 urgente, 2 haute, 3 normale (par défaut), 4 basse
+  `ALTER TABLE tasks ADD COLUMN priority INTEGER NOT NULL DEFAULT 3;`
 ];
 
 // backupDir : si la base doit être mise à jour, une copie de sécurité y est faite avant.

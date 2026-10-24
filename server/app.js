@@ -114,7 +114,7 @@ function createApp({ db, demo = false, publicDir = path.join(ROOT, 'public') }) 
     req.on('close', () => listeners.delete(l));
   });
 
-  for (const r of ['connexion', 'etat', 'taches', 'groupes', 'categories', 'comptes']) require('./routes/' + r)(app, ctx);
+  for (const r of ['connexion', 'etat', 'taches', 'groupes', 'categories', 'comptes', 'acces']) require('./routes/' + r)(app, ctx);
 
   // Connecteur pour Claude, téléchargeable depuis la page Compte.
   app.get('/outils/claude-mcp.js', (req, res) => res.download(path.join(ROOT, 'outils', 'claude-mcp.js'), 'claude-mcp.js'));

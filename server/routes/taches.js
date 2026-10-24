@@ -44,7 +44,10 @@ module.exports = function (app, { db, auth, adminOnly, handle, q }) {
       desc: str(s && s.desc, 2000, 'La description d\'une étape'),
       done: !!(s && s.done)
     })).filter(s => s.label);
-    return { title, desc, type, start: b.start, end: b.end, groupId: g.id, ownerId, steps, completed: b.completed ? 1 : 0 };
+    // Priorité : 1 urgente, 2 haute, 3 normale, 4 basse (normale si absente ou illisible).
+    const pr = Number(b.priority);
+    const priority = [1, 2, 3, 4].includes(pr) ? pr : (existing ? existing.priority : 3);
+    return { title, desc, type, start: b.start, end: b.end, groupId: g.id, ownerId, steps, completed: b.completed ? 1 : 0, priority };
   }
 
   function writeSteps(taskId, steps, userId) {
@@ -72,6 +75,7 @@ module.exports = function (app, { db, auth, adminOnly, handle, q }) {
       out.push('responsable → ' + (u ? u.name : 'tout le groupe'));
     }
     if (before.type !== d.type) out.push('catégorie');
+    if (before.priority !== d.priority) out.push('priorité → ' + ({ 1: 'urgente', 2: 'haute', 3: 'normale', 4: 'basse' })[d.priority]);
     if (before.start_date !== d.start) out.push('début');
     if (before.end_date !== d.end) out.push('fin → ' + d.end.split('-').reverse().join('/'));
     if (before.description !== d.desc) out.push('description');
@@ -82,8 +86,8 @@ module.exports = function (app, { db, auth, adminOnly, handle, q }) {
     const d = readTask(req.me, req.body);
     const id = newId();
     db.tx(() => {
-      db.prepare(`INSERT INTO tasks (id, group_id, owner_id, type, title, description, start_date, end_date, created_by, completed)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, d.groupId, d.ownerId, d.type, d.title, d.desc, d.start, d.end, req.me.id, d.steps.length ? 0 : d.completed);
+      db.prepare(`INSERT INTO tasks (id, group_id, owner_id, type, title, description, start_date, end_date, created_by, completed, priority)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, d.groupId, d.ownerId, d.type, d.title, d.desc, d.start, d.end, req.me.id, d.steps.length ? 0 : d.completed, d.priority);
       writeSteps(id, d.steps, req.me.id);
       q.majTerminee(id, req.me.id);
       log(id, req.me.id, 'creation');
@@ -97,7 +101,7 @@ module.exports = function (app, { db, auth, adminOnly, handle, q }) {
     const before = db.prepare('SELECT label, done FROM steps WHERE task_id = ? ORDER BY position').all(t.id);
     db.tx(() => {
       db.prepare(`UPDATE tasks SET group_id = ?, owner_id = ?, type = ?, title = ?, description = ?, start_date = ?, end_date = ?,
-        completed = ?, updated_at = datetime('now') WHERE id = ?`).run(d.groupId, d.ownerId, d.type, d.title, d.desc, d.start, d.end, d.steps.length ? 0 : d.completed, t.id);
+        completed = ?, priority = ?, updated_at = datetime('now') WHERE id = ?`).run(d.groupId, d.ownerId, d.type, d.title, d.desc, d.start, d.end, d.steps.length ? 0 : d.completed, d.priority, t.id);
       writeSteps(t.id, d.steps, req.me.id);
       q.majTerminee(t.id, req.me.id);
       const changes = describeChanges(t, d);
@@ -154,6 +158,7 @@ module.exports = function (app, { db, auth, adminOnly, handle, q }) {
         id: t.id, title: t.title, desc: t.description, type: t.type, ownerId: t.owner_id, groupId: t.group_id,
         group: { name: t.group_name || 'Groupe supprimé', icon: t.group_icon || '📁', color: t.group_color || '#666A6F' },
         start: t.start_date, end: t.end_date, doneAt: t.done_at, doneBy: t.done_by,
+        createdBy: t.created_by, createdAt: t.created_at, priority: t.priority,
         archived: !!db.prepare(`SELECT 1 FROM tasks x WHERE x.id = ? AND NOT ${q.nonArchivee('x')}`).get(t.id),
         steps: steps[t.id] || []
       }))

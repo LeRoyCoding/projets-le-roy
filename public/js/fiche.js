@@ -33,7 +33,9 @@ function renderModal() {
   m.innerHTML = `<div class="scrim" data-act="close-modal"></div><div class="sheet ${wasOpen ? '' : 'anim'}" role="dialog" aria-modal="true" aria-labelledby="mt" style="--g:${esc(g.color)}">
  <div class="sheet-h"><div class="crumbs"><span class="tag g">${gIcon(g.icon, '')}${groupName(g)}</span><span class="tag">${emo(cat.emoji)}${esc(cat.label)}</span>${isShared(g) ? '<span class="tag">' + emo('👥') + 'Groupe commun</span>' : ''}</div><button class="icon-btn" data-act="close-modal" aria-label="Fermer" id="m-close">${ic('close')}</button></div>
  <h2 id="mt">${esc(t.title)}</h2>
- <dl class="facts"><div><dt>Pour qui</dt><dd>${t.ownerId ? esc(userById(t.ownerId).name) : 'Tout le groupe'}</dd></div><div><dt>Début</dt><dd class="mono">${fmtLong(t.start)}</dd></div><div><dt>Fin</dt><dd><span class="mono">${fmtLong(t.end)}</span>${badge(t)}</dd></div></dl>
+ <dl class="facts"><div><dt>Pour qui</dt><dd>${t.ownerId ? esc(userById(t.ownerId).name) : 'Tout le groupe'}</dd></div><div><dt>Début</dt><dd class="mono">${fmtLong(t.start)}</dd></div><div><dt>Fin</dt><dd><span class="mono">${fmtLong(t.end)}</span>${badge(t)}</dd></div>
+ <div><dt>Priorité</dt><dd><span class="prio p${t.priority || 3}">${emo(prio(t).e)}${prio(t).label}</span></dd></div>
+ <div><dt>Créée par</dt><dd>${t.createdBy ? esc(userById(t.createdBy).name) : '—'}${t.createdAt ? `<span class="mono small">${fmtStamp(t.createdAt)}</span>` : ''}</dd></div></dl>
  ${t.doneAt ? `<p class="valide">${emo('✅')} Terminée par <b>${t.doneBy ? esc(userById(t.doneBy).name) : '—'}</b> · ${fmtStamp(t.doneAt)} — disparaîtra de l'écran ${esc(disparitionLe(t))}</p>` : ''}
  ${t.desc ? `<p class="desc">${esc(t.desc)}</p>` : ''}
  <div class="prog"><div class="prog-n">${p}<small>%</small></div><div class="prog-b"><span class="bar big"><span style="width:${p}%;background:${st === 'done' ? 'var(--ok)' : 'var(--g)'}"></span></span>

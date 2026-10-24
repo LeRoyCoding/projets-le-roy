@@ -48,6 +48,7 @@ function toolbar() {
   return `<div class="toolbar">
   <label class="searchbox">${ic('search')}<input type="search" id="q" value="${esc(ui.search)}" placeholder="Rechercher (titre, client, étape…)" aria-label="Rechercher une tâche"></label>
   <select id="f-cat" aria-label="Filtrer par catégorie"><option value="">Toutes les catégories</option>${cats.map(c => `<option value="${esc(c.id)}" ${ui.cat === c.id ? 'selected' : ''}>${esc(c.emoji)} ${esc(c.label)}</option>`).join('')}</select>
+  <select id="f-prio" aria-label="Filtrer par priorité"><option value="">Toutes les priorités</option>${[1, 2, 3, 4].map(n => `<option value="${n}" ${ui.prio === String(n) ? 'selected' : ''}>${PRIORITES[n].e} ${PRIORITES[n].label}</option>`).join('')}</select>
   ${!isAdmin() ? `<label class="toggle"><input type="checkbox" id="f-mine" ${ui.onlyMine ? 'checked' : ''}><span>Seulement mes tâches</span></label>` : ''}
   <label class="toggle"><input type="checkbox" id="f-hide" ${ui.hideDone ? 'checked' : ''}><span>Masquer les terminées</span></label>
  </div>`;
@@ -60,7 +61,7 @@ function taskRow(t) {
   return `<li><button class="trow st-${st}" data-act="open-task" data-id="${esc(t.id)}">
   <span class="ttile" title="${esc(cat.label)}">${emo(cat.emoji)}</span>
   <span class="tmain"><span class="ttitle">${esc(t.title)}</span>
-   <span class="tmeta"><span class="date">Fin ${fmt(t.end)}</span>${who(t)}${badge(t)}${t.comments ? `<span class="cmt" title="${plural(t.comments, 'commentaire')}">${emo('💬')}${t.comments}</span>` : ''}</span>
+   <span class="tmeta">${t.priority === 1 || t.priority === 2 ? `<span class="prio p${t.priority}" title="Priorité ${prio(t).label.toLowerCase()}">${emo(prio(t).e)}${prio(t).court}</span>` : ''}<span class="date">Fin ${fmt(t.end)}</span>${who(t)}${badge(t)}${t.comments ? `<span class="cmt" title="${plural(t.comments, 'commentaire')}">${emo('💬')}${t.comments}</span>` : ''}</span>
    <span class="bar"><span style="width:${p}%"></span></span></span>
   <span class="tpct">${p}<small>%</small></span></button></li>`;
 }
@@ -77,7 +78,9 @@ function homeResults() {
   const groups = visibleGroups(tasks);
   if (!groups.length && filtersActive()) return noResult();
   return `<div class="groups">${groups.map(g => {
-    const list = tasks.filter(t => t.groupId === g.id).sort((a, b) => order[status(a)] - order[status(b)] || a.end.localeCompare(b.end));
+    // Terminées en bas ; sinon la plus prioritaire d'abord, puis en retard / bientôt, puis la date de fin.
+    const list = tasks.filter(t => t.groupId === g.id).sort((a, b) =>
+      (status(a) === 'done') - (status(b) === 'done') || (a.priority || 3) - (b.priority || 3) || order[status(a)] - order[status(b)] || a.end.localeCompare(b.end));
     const shared = isShared(g);
     const canAdd = admin || (g.members || []).includes(me.id);
     const hidden = ui.hideDone ? S.tasks.filter(t => t.groupId === g.id && status(t) === 'done').length : 0;
@@ -114,7 +117,7 @@ function timelineResults() {
     tasks.filter(t => t.groupId === g.id).sort((a, b) => a.start.localeCompare(b.start)).forEach(t => {
       const p = pct(t), st = status(t), left = diffD(start, t.start) * DPD, w = Math.max(1, diffD(t.start, t.end) + 1) * DPD;
       const owner = t.ownerId ? `<span class="av" title="${esc(userById(t.ownerId).name)}">${ini(userById(t.ownerId))}</span>` : `<span title="Tout le groupe">${emo('👥')}</span>`;
-      rows += `<div class="tl-row" style="--g:${esc(g.color)}"><div class="tl-lab" title="${esc(t.title)}">${emo(catById(t.type).emoji)}<span class="nm">${esc(t.title)}</span>${owner}</div>
+      rows += `<div class="tl-row" style="--g:${esc(g.color)}"><div class="tl-lab" title="${esc(t.title)}">${t.priority === 1 || t.priority === 2 ? `<span title="Priorité ${prio(t).label.toLowerCase()}">${emo(prio(t).e)}</span>` : ''}${emo(catById(t.type).emoji)}<span class="nm">${esc(t.title)}</span>${owner}</div>
    <div class="tl-track"><button class="tbar st-${st} ${w < 70 ? 'out' : ''}" style="left:${left}px;width:${w}px" data-act="open-task" data-id="${esc(t.id)}" aria-label="${esc(t.title)}, ${p} %"><span class="fill" style="width:${p}%"></span><span class="blab">${p} %</span></button></div></div>`;
     });
   });
@@ -183,6 +186,7 @@ function vNewTask() {
     <button type="button" class="btn primary sm" data-act="cat-add-save">Ajouter</button><button type="button" class="btn sm" data-act="cat-add-cancel">Annuler</button>
    </div>
    <p class="hint"><button type="button" class="link" data-act="cat-add-open">+ Nouvelle catégorie</button> · <button type="button" class="link" data-act="nav" data-v="categories">Gérer les catégories</button></p></fieldset>
+  <fieldset class="field"><legend>Priorité</legend><div class="pick">${[1, 2, 3, 4].map(n => `<label><input type="radio" name="f-prio" value="${n}" ${(src ? (src.priority || 3) : 3) === n ? 'checked' : ''}><span class="opt">${emo(PRIORITES[n].e)}${PRIORITES[n].label}</span></label>`).join('')}</div></fieldset>
   <div class="row2"><label class="field"><span>Début</span><input type="date" id="f-start" value="${src ? src.start : iso(today())}"></label>
   <label class="field"><span>Fin</span><input type="date" id="f-end" value="${src ? src.end : addD(14)}"></label></div>
   <label class="field"><span>Description</span><textarea id="f-desc" maxlength="5000" placeholder="Contexte, client, points d'attention">${esc(src ? src.desc : '')}</textarea></label>
@@ -269,6 +273,7 @@ function vAccount() {
   return `<section class="acc"><div><p class="eyebrow">Compte</p><h1 style="font-size:34px">Mon compte</h1></div>
  <div class="panel acc-id"><span class="av">${ini(me)}</span><div><h2>${esc(me.name)}</h2><p>${admin ? 'Administrateur · voit et attribue les tâches de toute l\'équipe' : 'Utilisateur · voit ses tâches et celles de ses groupes'} · ${plural(mine, 'tâche')} à son nom</p></div>
   <button class="btn" data-act="logout">${ic('logout', 'sm')}Se déconnecter</button></div>
+ ${vAcces()}
  <form id="pwd-form" class="panel form"><h3>Changer de mot de passe</h3>
   ${admin && S.defaultAdminPassword ? `<p class="warnbox">${emo('🔑')} Le mot de passe est encore « admin » : choisissez-en un nouveau.</p>` : ''}
   <div class="row2"><label class="field"><span>Mot de passe actuel</span><input type="password" id="p-old" autocomplete="current-password"></label>
@@ -288,6 +293,24 @@ function vAccount() {
   <p class="hint" style="margin-top:10px">L'export contient les tâches que vous voyez, avec leur avancement.${admin ? ' La sauvegarde complète est une copie de toute la base (à garder en lieu sûr, par exemple sur une clé USB). Une sauvegarde est aussi faite automatiquement chaque jour sur le PC serveur.' : ''}</p></div>
  <p class="hint version">Projets Le Roy · version ${esc(S.version || '')}</p>
  </section>`;
+}
+// Adresse de connexion + QR code, pour ouvrir l'application sur un autre appareil.
+function vAcces() {
+  const a = ui.acces;
+  let corps;
+  if (!a) corps = '<p class="hint">Chargement…</p>';
+  else if (a.error) corps = `<p class="err">${esc(a.error)}</p>`;
+  else if (!a.principale) corps = '<p class="hint">Le PC serveur n\'est connecté à aucun réseau.</p>';
+  else corps = `<div class="acces">
+    <div class="acces-qr" aria-label="QR code de l'adresse de connexion">${a.qr}</div>
+    <div class="acces-txt">
+      <p class="hint">Adresse à taper dans le navigateur (sur le Wi-Fi du bureau) :</p>
+      <code id="acces-url">${esc(a.principale)}</code>
+      <div class="data-btns"><button class="btn sm primary" data-act="copy" data-target="acces-url">Copier l'adresse</button>
+      <a class="btn sm" href="/acces" target="_blank" rel="noopener">${ic('download', 'sm')}Fiche à imprimer</a></div>
+      <p class="hint">Sur un téléphone ou une tablette : ouvrez l'appareil photo et visez le QR code.${a.autres && a.autres.length ? `<br>Autres adresses possibles : ${a.autres.map(esc).join(' · ')}` : ''}</p>
+    </div></div>`;
+  return `<div class="panel"><h3>${emo('📱')} Se connecter depuis un autre appareil</h3>${corps}</div>`;
 }
 function vTeam() {
   const rows = S.users.map(u => {

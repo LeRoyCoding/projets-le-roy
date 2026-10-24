@@ -21,6 +21,9 @@ function status(t) {
   if (d <= 7) return 'sous_7_jours';
   return 'en_cours';
 }
+const PRIO_TXT = { 1: 'urgente', 2: 'haute', 3: 'normale', 4: 'basse' };
+const PRIO_VAL = { urgente: 1, haute: 2, normale: 3, basse: 4 };
+const prioSchema = { type: 'string', enum: ['urgente', 'haute', 'normale', 'basse'], description: 'Priorité de la tâche.' };
 const STATUS_TXT = { terminee: '✅ terminée', en_retard: '🚨 en retard', sous_7_jours: '⚠️ échéance sous 7 jours', en_cours: 'en cours' };
 
 function parseDate(v, label) {
@@ -67,7 +70,8 @@ function taskLine(c, t) {
   const d = daysBetween(todayIso(), t.end);
   const st = status(t);
   const when = st === 'en_retard' ? `${-d} j de retard` : st === 'sous_7_jours' ? (d === 0 ? 'fin aujourd\'hui' : `J-${d}`) : '';
-  return `- [${t.id}] ${cat.emoji} ${t.title} — ${c.groupLabel(c.group(t.groupId))}, pour ${who}, fin ${frDate(t.end)}, ${pct(t)} % (${STATUS_TXT[st]}${when ? ', ' + when : ''})`;
+  const p = t.priority && t.priority !== 3 ? `priorité ${PRIO_TXT[t.priority]}, ` : '';
+  return `- [${t.id}] ${cat.emoji} ${t.title} — ${c.groupLabel(c.group(t.groupId))}, pour ${who}, ${p}fin ${frDate(t.end)}, ${pct(t)} % (${STATUS_TXT[st]}${when ? ', ' + when : ''})`;
 }
 
 // Crée la liste des outils pour une fonction d'appel à l'API donnée.
@@ -133,7 +137,8 @@ function creerOutils(api) {
         const d = await api('GET', `/api/tasks/${encodeURIComponent(t.id)}/details`);
         const cat = c.cat(t.type);
         return [`${cat.emoji} ${t.title}  [${t.id}]`,
-          `Groupe : ${c.groupLabel(c.group(t.groupId))} · Catégorie : ${cat.label} · Pour : ${t.ownerId ? c.userName(t.ownerId) : 'tout le groupe'}`,
+          `Groupe : ${c.groupLabel(c.group(t.groupId))} · Catégorie : ${cat.label} · Pour : ${t.ownerId ? c.userName(t.ownerId) : 'tout le groupe'} · Priorité : ${PRIO_TXT[t.priority || 3]}`,
+          `Créée par ${t.createdBy ? c.userName(t.createdBy) : '—'}${t.createdAt ? ' le ' + t.createdAt + ' UTC' : ''}`,
           `Du ${frDate(t.start)} au ${frDate(t.end)} · Avancement ${pct(t)} % · ${STATUS_TXT[status(t)]}`,
           t.desc ? `\nDescription :\n${t.desc}` : '',
           `\nÉtapes :\n` + (t.steps.map((s, i) => `${i + 1}. [${s.done ? 'x' : ' '}] ${s.label}${s.desc ? ' — ' + s.desc : ''}${s.done && s.doneBy ? ` (cochée par ${c.userName(s.doneBy)}${s.doneAt ? ' le ' + s.doneAt + ' UTC' : ''})` : ''}  (id ${s.id})`).join('\n') || '(aucune)'),
@@ -154,6 +159,7 @@ function creerOutils(api) {
         categorie: str('Catégorie (Devis, Chantier, Commercial…). Première catégorie par défaut.'),
         pour_qui: str('Nom de la personne responsable. Vide = tout le groupe (groupe commun) ou la personne connectée.'),
         description: str('Contexte, client, points d\'attention.'),
+        priorite: prioSchema,
         etapes: { type: 'array', description: 'Étapes à cocher, dans l\'ordre.', items: { anyOf: [{ type: 'string' }, { type: 'object', properties: { libelle: { type: 'string' }, description: { type: 'string' } }, required: ['libelle'] }] } }
       }, ['titre', 'groupe', 'fin']),
       async run(a) {
@@ -163,7 +169,7 @@ function creerOutils(api) {
         const owner = a.pour_qui ? findOne(c.st.users.filter(u => u.active), a.pour_qui, u => u.name, 'Personne') : null;
         const ownerId = owner ? owner.id : (g.members.length > 1 && c.me.role === 'admin' ? null : (g.members.length > 1 ? null : g.members[0] || c.me.id));
         const steps = (a.etapes || []).map(s => typeof s === 'string' ? { label: s } : { label: s.libelle, desc: s.description || '' });
-        const body = { title: a.titre, groupId: g.id, type: cat ? cat.id : undefined, ownerId, start: parseDate(a.debut, 'Début') || todayIso(), end: parseDate(a.fin, 'Fin'), desc: a.description || '', steps };
+        const body = { title: a.titre, groupId: g.id, type: cat ? cat.id : undefined, ownerId, start: parseDate(a.debut, 'Début') || todayIso(), end: parseDate(a.fin, 'Fin'), desc: a.description || '', steps, priority: PRIO_VAL[a.priorite] || 3 };
         const r = await api('POST', '/api/tasks', body);
         return `Tâche créée [${r.id}] : « ${a.titre} » dans ${c.groupLabel(g)}, pour ${owner ? owner.name : (ownerId ? c.userName(ownerId) : 'tout le groupe')}, échéance ${frDate(body.end)}, ${steps.length} étape(s).`;
       }
@@ -175,7 +181,8 @@ function creerOutils(api) {
         id: str('Identifiant de la tâche.'),
         titre: str('Nouveau titre.'), groupe: str('Nouveau groupe.'), categorie: str('Nouvelle catégorie.'),
         pour_qui: str('Nouvelle personne responsable ; « tout le groupe » pour une tâche commune.'),
-        debut: str('Nouvelle date de début.'), fin: str('Nouvelle date de fin.'), description: str('Nouvelle description.')
+        debut: str('Nouvelle date de début.'), fin: str('Nouvelle date de fin.'), description: str('Nouvelle description.'),
+        priorite: prioSchema
       }, ['id']),
       async run(a) {
         const c = ctx(await api('GET', '/api/state'));
@@ -189,6 +196,7 @@ function creerOutils(api) {
         if (a.debut) body.start = parseDate(a.debut, 'Début');
         if (a.fin) body.end = parseDate(a.fin, 'Fin');
         if (a.description !== undefined) body.desc = a.description;
+        if (a.priorite) body.priority = PRIO_VAL[a.priorite];
         await api('PUT', '/api/tasks/' + encodeURIComponent(t.id), body);
         return `Tâche [${t.id}] mise à jour.`;
       }
