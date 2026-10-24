@@ -3,6 +3,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { ROOT } = require('../db');
+const { adressesReseau } = require('../outils');
 
 // Version affichée dans la page Compte : numéro du package + commit Git s'il est connu.
 function version() {
@@ -60,8 +61,7 @@ module.exports = function (app, { db, auth, handle, q }) {
 
     // Adresses de l'application sur le réseau (pour configurer Claude depuis un autre PC).
     const port = req.socket.localPort;
-    const lanUrls = Object.values(os.networkInterfaces()).flat()
-      .filter(a => a && a.family === 'IPv4' && !a.internal).map(a => `http://${a.address}:${port}`);
+    const lanUrls = adressesReseau(port);
 
     return {
       me: me.id,
@@ -76,7 +76,8 @@ module.exports = function (app, { db, auth, handle, q }) {
       connecteur: { actif: db.getSetting('connecteur_internet') === '1', port: app.locals.connecteur?.port || Number(process.env.MCP_PORT) || 3001 },
       tasks: tasks.map(t => ({
         id: t.id, groupId: t.group_id, ownerId: t.owner_id, type: t.type, title: t.title, desc: t.description,
-        start: t.start_date, end: t.end_date, completed: !!t.completed, doneAt: t.done_at, doneBy: t.done_by, comments: commentCounts[t.id] || 0,
+        start: t.start_date, end: t.end_date, completed: !!t.completed, doneAt: t.done_at, doneBy: t.done_by,
+        createdBy: t.created_by, priority: t.priority, comments: commentCounts[t.id] || 0,
         createdAt: t.created_at, updatedAt: t.updated_at, steps: stepsByTask[t.id] || []
       }))
     };

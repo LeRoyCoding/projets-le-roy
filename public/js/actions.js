@@ -36,7 +36,7 @@ function go(v, keep) {
   ui.view = v; ui.pwdErr = ''; ui.editUser = null; ui.editCat = null; ui.catDel = null;
   if (!keep) { ui.editId = null; ui.dupFrom = null; ui.editGroup = null; ui.presetGroup = null; }
   if (v !== 'account') ui.newKey = null;
-  if (v === 'account') loadKeys();
+  if (v === 'account') { loadKeys(); loadAcces(); }
   if (v === 'historique') loadHistorique();
   render(); window.scrollTo(0, 0);
 }
@@ -64,6 +64,10 @@ function exportHistoriqueCsv() {
     t.doneBy ? userById(t.doneBy).name : '—', t.steps.length, t.archived ? 'Archivée' : 'Encore affichée']);
   const csv = '\ufeff' + [['Terminée le', 'Tâche', 'Groupe', 'Catégorie', 'Pour qui', 'Validée par', 'Étapes', 'État'], ...rows].map(r => r.map(cell).join(';')).join('\r\n');
   downloadFile(`historique-taches-${iso(today())}.csv`, csv, 'text/csv;charset=utf-8');
+}
+async function loadAcces() {
+  try { ui.acces = await api('GET', '/api/acces'); } catch (e) { ui.acces = { error: e.message }; }
+  if (ui.view === 'account') render();
 }
 async function loadKeys() {
   try { ui.keys = (await api('GET', '/api/tokens')).tokens; if (ui.view === 'account') render(); } catch { /* sans importance */ }
@@ -101,11 +105,11 @@ onUnauthorized = async () => { S = null; stopEvents(); await loadLogin(); render
 function exportCsv() {
   const cell = v => { const s = String(v ?? ''); return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   const frDate = s => s.split('-').reverse().join('/');
-  const head = ['Groupe', 'Catégorie', 'Titre', 'Pour qui', 'Début', 'Fin', 'Avancement (%)', 'Statut', 'Étapes faites', 'Étapes au total', 'Description'];
+  const head = ['Groupe', 'Catégorie', 'Priorité', 'Titre', 'Pour qui', 'Créée par', 'Début', 'Fin', 'Avancement (%)', 'Statut', 'Étapes faites', 'Étapes au total', 'Description'];
   const rows = visibleTasks({ ignoreDone: true }).map(t => {
     const g = groupById(t.groupId);
     return [isAdmin() && !isShared(g) && g.members?.length ? g.name + ' · ' + userById(g.members[0]).name : g.name,
-      catById(t.type).label, t.title, t.ownerId ? userById(t.ownerId).name : 'Tout le groupe', frDate(t.start), frDate(t.end),
+      catById(t.type).label, prio(t).label, t.title, t.ownerId ? userById(t.ownerId).name : 'Tout le groupe', t.createdBy ? userById(t.createdBy).name : '', frDate(t.start), frDate(t.end),
       pct(t), statusLabel(t), t.steps.filter(s => s.done).length, t.steps.length, t.desc];
   });
   const csv = '﻿' + [head, ...rows].map(r => r.map(cell).join(';')).join('\r\n');
@@ -167,7 +171,7 @@ document.addEventListener('click', async e => {
       break;
     case 'filter-user': if (id === 'all') ui.filter = []; else { ui.filter = ui.filter.includes(id) ? ui.filter.filter(x => x !== id) : [...ui.filter, id]; } render(); break;
     case 'stat-filter': ui.statusFilter = ui.statusFilter === id ? null : id; renderResults(); break;
-    case 'clear-filters': ui.statusFilter = null; ui.search = ''; ui.cat = ''; ui.filter = []; ui.onlyMine = false; pref.set('onlyMine', false); ui.hideDone = false; pref.set('hideDone', false); render(); break;
+    case 'clear-filters': ui.statusFilter = null; ui.prio = ''; ui.search = ''; ui.cat = ''; ui.filter = []; ui.onlyMine = false; pref.set('onlyMine', false); ui.hideDone = false; pref.set('hideDone', false); render(); break;
     case 'tl-group': ui.tlGroup = id; renderResults(); break;
     // Formulaire de tâche
     case 'draft-add-step': { const ol = $('#steps-ed'); ol.insertAdjacentHTML('beforeend', stepRow(null)); ol.lastElementChild.querySelector('.s-label').focus(); break; }
@@ -256,6 +260,7 @@ document.addEventListener('change', e => {
   const el = e.target;
   if (el.id === 'f-group') { const g = groupById(el.value); $('#f-owner').innerHTML = ownerOptions(g.id, isShared(g) ? null : (g.members?.[0] || cur().id)); }
   if (el.id === 'f-cat') { ui.cat = el.value; renderResults(); }
+  if (el.id === 'f-prio') { ui.prio = el.value; renderResults(); }
   if (el.id === 'f-hide') { ui.hideDone = el.checked; pref.set('hideDone', el.checked); renderResults(); }
   if (el.id === 'f-mine') { ui.onlyMine = el.checked; pref.set('onlyMine', el.checked); renderResults(); }
   if (el.name === 'theme') { pref.set('theme', el.value); applyTheme(); }
@@ -290,7 +295,8 @@ async function onSubmit(f) {
     if (!start || !end) return showErr(f, 'Renseignez les dates de début et de fin.');
     if (end < start) return showErr(f, 'La date de fin doit être après la date de début.');
     const steps = [...f.querySelectorAll('.sed')].map(r => ({ id: r.dataset.sid || null, label: r.querySelector('.s-label').value.trim(), desc: r.querySelector('.s-desc').value.trim(), done: r.dataset.done === '1' })).filter(s => s.label);
-    const data = { title, groupId: $('#f-group').value, ownerId: $('#f-owner').value || null, type: (f.querySelector('input[name=f-type]:checked') || {}).value, start, end, desc: $('#f-desc').value.trim(), steps };
+    const data = { title, groupId: $('#f-group').value, ownerId: $('#f-owner').value || null, type: (f.querySelector('input[name=f-type]:checked') || {}).value,
+      priority: Number((f.querySelector('input[name=f-prio]:checked') || {}).value || 3), start, end, desc: $('#f-desc').value.trim(), steps };
     const editId = ui.editId;
     const msg = editId ? 'Tâche enregistrée' : (data.ownerId && data.ownerId !== cur().id ? 'Tâche créée pour ' + userById(data.ownerId).name : 'Tâche créée');
     try {

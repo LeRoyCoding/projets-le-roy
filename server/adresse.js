@@ -1,5 +1,4 @@
 // Vérifie que le serveur répond et affiche l'adresse à donner aux collègues.
-const os = require('os');
 const port = Number(process.env.PORT) || 3000;
 
 (async () => {
@@ -13,13 +12,13 @@ const port = Number(process.env.PORT) || 3000;
     console.log('  Pour voir le problème, lancez plutôt demarrer.bat (avec la fenêtre).\n');
     process.exit(1);
   }
-  const ips = Object.values(os.networkInterfaces()).flat()
-    .filter(a => a && a.family === 'IPv4' && !a.internal).map(a => a.address);
+  const urls = require('./outils').adressesReseau(port);
   console.log('\n  ==============================================');
   console.log('   Projets Le Roy fonctionne en arrière-plan');
   console.log('  ==============================================');
   console.log(`   Sur ce PC          : http://localhost:${port}`);
-  for (const ip of ips) console.log(`   Pour les collègues : http://${ip}:${port}`);
+  for (const url of urls) console.log(`   Pour les collègues : ${url}`);
+  console.log(`   Fiche avec QR code à imprimer : http://localhost:${port}/acces`);
   console.log('\n   Aucune fenêtre à garder ouverte.');
   console.log('   Pour arrêter l\'application : arreter.bat\n');
 })();

@@ -65,6 +65,10 @@ Sur chaque PC ou tablette, ouvrez l'adresse donnée par `demarrer-en-arriere-pla
 
 L'icône Le Roy apparaît sur le bureau, comme un vrai logiciel.
 
+**Astuce pour ne plus chercher l'adresse** : dans l'application, page **Compte**, l'adresse et un **QR code** sont affichés.
+Le bouton **Fiche à imprimer** (ou `http://localhost:3000/acces` sur le PC serveur) donne une page à imprimer et afficher au bureau :
+il suffit de la scanner avec un téléphone ou une tablette.
+
 ## 5. Données et sauvegardes
 
 - Les données sont dans `C:\ProjetsLeRoy\donnees\projets.sqlite` (un seul fichier). Elles ne vont jamais sur GitHub.

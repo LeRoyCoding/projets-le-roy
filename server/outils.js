@@ -31,4 +31,15 @@ const todayIso = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-module.exports = { HttpError, fail, str, isDate, newId, newToken, hashToken, todayIso };
+// Adresses de ce PC sur le réseau, la plus probable en premier (Wi-Fi / réseau du bureau).
+function adressesReseau(port) {
+  const os = require('os');
+  const rang = ip => ip.startsWith('192.168.') ? 0 : ip.startsWith('10.') ? 1 : /^172\.(1[6-9]|2\d|3[01])\./.test(ip) ? 2 : 3;
+  return Object.values(os.networkInterfaces()).flat()
+    .filter(a => a && a.family === 'IPv4' && !a.internal && !a.address.startsWith('169.254.'))
+    .map(a => a.address)
+    .sort((a, b) => rang(a) - rang(b))
+    .map(ip => `http://${ip}:${port}`);
+}
+
+module.exports = { adressesReseau, HttpError, fail, str, isDate, newId, newToken, hashToken, todayIso };

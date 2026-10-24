@@ -5,6 +5,7 @@ Ce guide s'adresse à toute l'équipe. Pas besoin d'être informaticien : tout s
 ## Se connecter
 
 1. Ouvrez l'icône **Projets Le Roy** (ou l'adresse donnée par l'administrateur, par exemple `http://192.168.1.25:3000`).
+   Sur un téléphone ou une tablette : **scannez le QR code** affiché dans la page **Compte** d'un collègue, ou sur la fiche imprimée.
 2. Cliquez sur votre prénom, tapez votre mot de passe, **Se connecter**.
 3. Vous restez connecté sur ce poste (pas besoin de recommencer chaque jour).
 
@@ -16,6 +17,7 @@ Une carte par **groupe** (« Le Roy », « LLC », votre « Perso »…). Dans c
 
 - le **pictogramme de la catégorie** (🧾 Devis, 🏗️ Chantier…) ;
 - la **date de fin**, la **personne responsable** (ou 👥 « Tout le groupe ») ;
+- la **priorité** si elle est 🔴 **Urgente** ou 🟠 **Haute** (les tâches urgentes passent en tête de leur carte) ;
 - un badge : 🚨 **en retard**, ⚠️ **J-3** (échéance dans 3 jours), ✅ **terminé** ;
 - la **barre d'avancement** et le **%** (étapes cochées / total) ;
 - 💬 le nombre de commentaires.
@@ -28,13 +30,14 @@ En haut : le nombre de tâches **en cours**, **sous 7 jours** et **en retard**.
 - **Toutes les catégories** : ne montrer qu'une catégorie (par exemple les devis).
 - **Seulement mes tâches** : cache les tâches des collègues.
 - **Masquer les terminées** : allège l'écran.
+- **Toutes les priorités** : ne montrer, par exemple, que les tâches urgentes.
 - L'administrateur peut aussi choisir une ou plusieurs personnes (« Afficher : Tout le monde / Antoine / Claire… »).
 
 Ces choix sont mémorisés sur votre poste.
 
 ## Une tâche (la fiche)
 
-Cliquez sur une tâche pour ouvrir sa fiche :
+Cliquez sur une tâche pour ouvrir sa fiche. On y voit aussi sa **priorité** et **qui l'a créée** (et quand).
 
 - **Cocher une étape** : cliquez sur la case. L'avancement se met à jour tout de suite, chez tout le monde.
 - **Ajouter une étape** : champ « Nouvelle étape » sous la liste.
@@ -54,6 +57,7 @@ Le bouton **+** d'une carte crée directement la tâche dans ce groupe.
 
 - **Titre**, **Groupe**, **Pour qui** (une personne, ou « Tout le groupe » pour une tâche commune).
 - **Catégorie** : choisissez-en une, ou **+ Nouvelle catégorie** pour en créer une sur le moment.
+- **Priorité** : 🔴 Urgente, 🟠 Haute, 🔵 Normale (par défaut) ou ⚪ Basse.
 - **Début** et **Fin**.
 - **Description** : contexte, client, points d'attention.
 - **Étapes** : la liste des choses à faire. Les flèches ↑ ↓ changent leur ordre, la corbeille les retire.
@@ -90,6 +94,8 @@ Onglet **Catégories** :
 
 ## Mon compte
 
+- **Adresse de connexion + QR code** : l'adresse à donner aux collègues, un bouton pour la copier, et un QR code à scanner
+  avec un téléphone ou une tablette. **Fiche à imprimer** ouvre une page avec le QR code en grand (Ctrl + P pour l'imprimer et l'afficher au bureau).
 - **Changer de mot de passe**, **Se déconnecter**.
 - **Affichage** : clair, sombre, ou comme l'ordinateur.
 - **Lier à Claude** : voir [lier-a-claude.md](lier-a-claude.md).

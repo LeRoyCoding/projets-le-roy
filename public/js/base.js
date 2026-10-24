@@ -25,6 +25,15 @@ const GROUP_COLORS = ['#C4122F', '#666A6F', '#2E8C76', '#D08A1E', '#3F7CC0', '#7
 const CAT_EMOJIS = ['🧾', '🏗️', '🤝', '💻', '📋', '⚙️', '🎪', '🏡', '🔧', '🛠️', '🚚', '📦', '🐔', '🥚', '🐣', '🌾', '🚜', '🏭',
   '💶', '📞', '✉️', '📝', '📐', '📊', '🎓', '🧪', '🔌', '💡', '🌡️', '💧', '🔥', '🌬️', '🧹', '🛡️', '⚖️', '📣', '📸', '🗂️', '🎯', '⭐'];
 
+// Niveaux de priorité d'une tâche (3 = normale, par défaut).
+const PRIORITES = {
+  1: { label: 'Urgente', e: '🔴', court: 'Urgent' },
+  2: { label: 'Haute', e: '🟠', court: 'Haute' },
+  3: { label: 'Normale', e: '🔵', court: 'Normale' },
+  4: { label: 'Basse', e: '⚪', court: 'Basse' }
+};
+const prio = t => PRIORITES[t.priority] || PRIORITES[3];
+
 const DAY = 864e5;
 const today = () => { const d = new Date(); d.setHours(12, 0, 0, 0); return d; };
 const iso = d => { const z = new Date(d); return z.getFullYear() + '-' + String(z.getMonth() + 1).padStart(2, '0') + '-' + String(z.getDate()).padStart(2, '0'); };
