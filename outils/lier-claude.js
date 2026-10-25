@@ -39,7 +39,7 @@ function configFiles() {
   console.log('  1. Dans l\'application Projets Le Roy : page Compte → « Lier à Claude » → « Créer une clé d\'accès ».');
   console.log('  2. Copiez la clé (elle commence par lr_) et collez-la ci-dessous (clic droit pour coller).\n');
 
-  const url = (await ask('  Adresse de l\'application', process.env.PROJETS_URL || 'http://localhost:3000')).replace(/\/+$/, '');
+  const url = (await ask('  Adresse de l\'application', process.env.PROJETS_URL || 'https://')).replace(/\/+$/, '');
   let key = '';
   while (!/^lr_[0-9a-f]{64}$/.test(key)) {
     key = await ask('  Clé d\'accès');
@@ -56,7 +56,7 @@ function configFiles() {
     console.log(`\n  Connexion réussie : clé de ${me ? me.name : '?'}, ${st.tasks.length} tâche(s) visibles.`);
   } catch (e) {
     console.log(`\n  Impossible de joindre l'application à ${url} : ${e.message}.`);
-    console.log('  Vérifiez l\'adresse (elle est affichée par demarrer-en-arriere-plan.bat) et que le PC serveur est allumé.');
+    console.log('  Vérifiez l\'adresse du site (celle que vous ouvrez dans le navigateur) et votre connexion Internet.');
     rl.close(); process.exitCode = 1; return;
   }
 

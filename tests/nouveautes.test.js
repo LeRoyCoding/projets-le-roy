@@ -62,14 +62,14 @@ test('catégories : changer l\'ordre', async () => {
 
 /* ---------- Équipe ---------- */
 test('équipe : l\'admin renomme, change le mot de passe, désactive', async () => {
-  const id = (await E.admin.post('/api/users', { name: 'Julien', password: '0000' })).data.id;
-  const julien = srv.client(); await julien.login('Julien', '0000');
+  const id = (await E.admin.post('/api/users', { name: 'Julien', password: 'secret0000' })).data.id;
+  const julien = srv.client(); await julien.login('Julien', 'secret0000');
   assert.equal((await E.claire.put('/api/users/' + id, { name: 'X' })).status, 403);
   assert.equal((await E.admin.put('/api/users/' + id, { name: 'Antoine' })).status, 400);
-  assert.equal((await E.admin.put('/api/users/' + id, { name: 'Julien D.', password: '9999' })).status, 200);
+  assert.equal((await E.admin.put('/api/users/' + id, { name: 'Julien D.', password: 'neuf9999' })).status, 200);
   assert.equal((await julien.get('/api/state')).status, 401, 'déconnecté après changement de mot de passe');
   const j2 = srv.client();
-  assert.equal((await j2.login('Julien D.', '9999')).status, 200);
+  assert.equal((await j2.login('Julien D.', 'neuf9999')).status, 200);
   assert.equal((await E.admin.put('/api/users/' + id, { active: false })).status, 200);
   assert.equal((await j2.get('/api/state')).status, 401);
   const comptes = (await srv.client().get('/api/comptes')).data.users;
@@ -86,7 +86,7 @@ test('équipe : on garde toujours un admin actif', async () => {
   const adminId = st.me;
   assert.equal((await E.admin.put('/api/users/' + adminId, { active: false })).status, 400);
   assert.equal((await E.admin.put('/api/users/' + adminId, { role: 'user' })).status, 400);
-  const b = (await E.admin.post('/api/users', { name: 'Chef', password: '0000', role: 'admin' })).data.id;
+  const b = (await E.admin.post('/api/users', { name: 'Chef', password: 'secret0000', role: 'admin' })).data.id;
   assert.equal((await E.admin.put('/api/users/' + b, { role: 'user' })).status, 200);
 });
 
@@ -157,7 +157,9 @@ test('sauvegarde téléchargeable par l\'admin seulement', async () => {
   const res = await E.admin.raw('GET', '/api/sauvegarde');
   assert.equal(res.status, 200);
   const buf = Buffer.from(await res.arrayBuffer());
-  assert.equal(buf.subarray(0, 15).toString(), 'SQLite format 3');
+  const sql = buf.toString();
+  assert.match(sql, /^-- Sauvegarde Projets Le Roy/);
+  assert.match(sql, /INSERT INTO `users`/);
 });
 
 test('version renvoyée', async () => {

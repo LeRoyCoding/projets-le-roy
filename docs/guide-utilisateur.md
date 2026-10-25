@@ -4,7 +4,7 @@ Ce guide s'adresse à toute l'équipe. Pas besoin d'être informaticien : tout s
 
 ## Se connecter
 
-1. Ouvrez l'icône **Projets Le Roy** (ou l'adresse donnée par l'administrateur, par exemple `http://192.168.1.25:3000`).
+1. Ouvrez l'icône **Projets Le Roy** (ou l'adresse du site donnée par l'administrateur, par exemple `https://projets.le-roy.fr`).
    Sur un téléphone ou une tablette : **scannez le QR code** affiché dans la page **Compte** d'un collègue, ou sur la fiche imprimée.
 2. Cliquez sur votre prénom, tapez votre mot de passe, **Se connecter**.
 3. Vous restez connecté sur ce poste (pas besoin de recommencer chaque jour).
@@ -79,8 +79,9 @@ La recherche et les filtres de l'accueil marchent aussi ici.
 - **2 personnes ou plus** = groupe **commun** : chacun voit et fait avancer toutes ses tâches.
 - **1 personne** = groupe **privé** (comme votre « Perso »).
 - Choisissez un **logo** et une **couleur**. Un groupe ne peut être supprimé que s'il est vide.
-- **Ordre des groupes** (administrateur) : flèches ↑ ↓ dans la liste « Groupes existants ». L'ordre s'applique à
-  l'accueil et à la timeline de tout le monde.
+- **Ordre des groupes** (administrateur) : sur l'**accueil**, chaque carte de groupe a deux flèches ← → (« Placer avant » / « Placer après »),
+  visibles quand aucun filtre n'est actif. On peut aussi utiliser les flèches ↑ ↓ de la liste « Groupes existants » (onglet + Groupe).
+  L'ordre s'applique à l'accueil et à la timeline de tout le monde.
 
 ## Les catégories
 
@@ -94,11 +95,11 @@ Onglet **Catégories** :
 
 ## Mon compte
 
-- **Adresse de connexion + QR code** : l'adresse à donner aux collègues, un bouton pour la copier, et un QR code à scanner
+- **Adresse de connexion + QR code** : l'adresse du site, un bouton pour la copier, et un QR code à scanner
   avec un téléphone ou une tablette. **Fiche à imprimer** ouvre une page avec le QR code en grand (Ctrl + P pour l'imprimer et l'afficher au bureau).
 - **Changer de mot de passe**, **Se déconnecter**.
 - **Affichage** : clair, sombre, ou comme l'ordinateur.
-- **Lier à Claude** : voir [lier-a-claude.md](lier-a-claude.md).
+- **Lier à Claude ou ChatGPT** : voir [lier-a-claude.md](lier-a-claude.md) et [lier-a-chatgpt.md](lier-a-chatgpt.md).
 - **Exporter les tâches (Excel)** : un fichier à ouvrir dans Excel avec les tâches affichées et leur avancement.
 
 ### Pour l'administrateur
@@ -112,6 +113,6 @@ Onglet **Catégories** :
 
 ## Bon à savoir
 
-- Les changements des collègues apparaissent **tout seuls**, sans recharger la page.
-- Si un bandeau rouge « Connexion au serveur perdue » apparaît, le PC serveur est éteint ou en veille : l'application se reconnecte toute seule dès qu'il revient.
-- L'application ne fonctionne que sur le réseau du bureau.
+- Les changements des collègues apparaissent **tout seuls** (en quelques secondes), sans recharger la page.
+- Si un bandeau rouge « Connexion au serveur perdue » apparaît, votre connexion Internet est coupée : l'application se reconnecte toute seule dès qu'elle revient.
+- L'application fonctionne partout où il y a Internet. Elle est protégée par votre nom et votre mot de passe : choisissez un mot de passe d'au moins 6 caractères, difficile à deviner.

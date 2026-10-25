@@ -1,0 +1,46 @@
+# Configuration Apache (hébergement OVHcloud).
+Options -Indexes
+DirectoryIndex index.html
+
+# Tout passe en HTTPS (l'application est sur Internet : mots de passe protégés par le cadenas).
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Transmet l'en-tête « Authorization » à PHP (clés d'accès Claude / ChatGPT).
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# L'API et le connecteur ChatGPT sont gérés par PHP.
+RewriteRule ^api/(.*)$ api/index.php [L,QSA]
+RewriteRule ^mcp(/.*)?$ api/mcp.php [L,QSA]
+</IfModule>
+
+# Fichiers qui ne doivent jamais être téléchargeables.
+<FilesMatch "^(config\.php|config\.exemple\.php|migrations\.php|lib\.php|routes\.php|mcp-tools\.php|.*\.sql|.*\.md)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# En-têtes de sécurité.
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "same-origin"
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'self'"
+</IfModule>
+
+# Pas de mise en cache des pages et scripts : les mises à jour arrivent tout de suite.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css|webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

@@ -1,20 +1,12 @@
 {
   "name": "projets-le-roy",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Gestion de projets et de tâches – Le Roy / Lead Le Roy Concept",
-  "main": "server/index.js",
+  "description": "Gestion de projets et de tâches – Le Roy / Lead Le Roy Concept (site PHP + MySQL pour OVHcloud, dossier www/)",
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning server/index.js",
-    "demo": "node --disable-warning=ExperimentalWarning server/index.js --demo",
-    "test": "node --disable-warning=ExperimentalWarning --test"
+    "test": "node --test"
   },
   "engines": {
-    "node": ">=22.13"
-  },
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "express": "^4.22.3",
-    "qrcode": "^1.5.4"
+    "node": ">=22"
   }
 }
