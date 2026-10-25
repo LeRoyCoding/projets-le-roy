@@ -72,9 +72,11 @@ jobs:
       - name: Déployer
         env:
           DEPLOY_ENV_FILE: ${{ runner.temp }}/cible.env
+          IN_CIBLE: ${{ inputs.cible }}
+          IN_MIGRER: ${{ inputs.migrer }}
         run: |
-          ARGS="--cible=${{ inputs.cible }}"
-          if [ "${{ inputs.migrer }}" = "true" ]; then ARGS="$ARGS --migrer"; fi
+          ARGS="--cible=$IN_CIBLE"
+          if [ "$IN_MIGRER" = "true" ]; then ARGS="$ARGS --migrer"; fi
           bash deploiement/deployer.sh $ARGS
       - name: Nettoyer
         if: always()

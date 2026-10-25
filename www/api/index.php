@@ -38,7 +38,7 @@ try {
     }
 
     schema_gate();   // la base doit être à jour : jamais de migration ici
-    $me = currentUser();
+    $me = auth_provider()->authenticate();
 
     // Protection contre les requêtes envoyées par un autre site à l'insu de la personne connectée (session par cookie).
     if ($method !== 'GET' && $me && empty($me['viaToken'])) {

@@ -42,6 +42,9 @@ function path_inside(string $path, string $root): bool {
     return $p && $r && ($p === $r || str_starts_with($p, $r . DIRECTORY_SEPARATOR));
 }
 
+function cut(string $s, int $n = 60): string { return mb_strlen($s) > $n ? mb_substr($s, 0, $n - 1) . '…' : $s; }
+function frd(string $d): string { return implode('/', array_reverse(explode('-', $d))); }
+
 /* ---------- Configuration (hors du dossier public) ----------
  * Disposition conseillée sur l'hébergement :
  *   ~/config/config.php   identifiants et secrets (jamais dans Git, jamais accessible par le web)
@@ -67,7 +70,7 @@ function config_optional(): array {
         return $cfg = ['db_host' => getenv('LR_DB_HOST') ?: '127.0.0.1', 'db_port' => getenv('LR_DB_PORT') ?: null,
             'db_name' => getenv('LR_DB_NAME'), 'db_user' => getenv('LR_DB_USER') ?: 'root', 'db_pass' => getenv('LR_DB_PASS') ?: '',
             'maintenance_key' => getenv('LR_TEST_MAINTENANCE_KEY') ?: null, 'data_dir' => getenv('LR_DATA_DIR') ?: null,
-            'backup_public_key' => getenv('LR_TEST_BACKUP_PUBKEY') ?: null, 'env' => 'test',
+            'backup_public_key' => getenv('LR_TEST_BACKUP_PUBKEY') ?: null, 'env' => 'test', 'auth_provider' => getenv('LR_TEST_AUTH_PROVIDER') ?: null,
             'restore_test' => getenv('LR_TEST_RESTORE_DB') ? ['db_name' => getenv('LR_TEST_RESTORE_DB'), 'db_user' => getenv('LR_DB_USER') ?: 'root', 'db_pass' => getenv('LR_DB_PASS') ?: ''] : null];
     }
     $f = config_file();

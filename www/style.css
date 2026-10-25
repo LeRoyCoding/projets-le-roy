@@ -436,3 +436,24 @@ button.stat.on b{color:var(--bg)}
 .keys-admin{list-style:none;margin:0;padding:0}
 @media (max-width:600px){.audit li{grid-template-columns:1fr}}
 .envbar{background:#8A5A00;color:#fff;text-align:center;font-weight:600;font-size:13px;padding:6px 10px;letter-spacing:.04em}
+
+/* Cloche, notifications, tableau de bord */
+.bell{position:relative;background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 10px;margin-right:8px;color:inherit;cursor:pointer}
+.bell .badge-n{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--steel);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+.bell .badge-n.late{background:var(--brand)}
+.notif{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.notif li{display:flex;gap:10px;align-items:flex-start}
+.notif li.unread{background:var(--brand-soft);border-radius:8px;padding:8px}
+.form-page.wide{max-width:1000px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:2px}
+.kpi b{font-family:'Barlow Condensed',sans-serif;font-size:38px;line-height:1}
+.kpi span{color:var(--muted);font-size:13px}.kpi.bad b{color:var(--brand)}.kpi.ok b{color:#1D7A3F}
+.tbl{overflow-x:auto}.tbl table{border-collapse:collapse;width:100%;font-size:14px}
+.tbl th,.tbl td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}.tbl td.bad{color:var(--brand);font-weight:700}
+.gtile.sm{display:inline-grid;width:24px;height:24px;vertical-align:middle}
+.weeks{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;align-items:end}
+.wk{display:grid;gap:2px;text-align:center}.wk small{color:var(--muted);font-size:11px}
+.bars{height:110px;display:flex;gap:4px;align-items:flex-end;justify-content:center}
+.bars .b{width:14px;border-radius:3px 3px 0 0;min-height:2px}.b.c,.dot.c{background:var(--steel)}.b.t,.dot.t{background:var(--brand)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:2px}

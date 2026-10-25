@@ -98,7 +98,11 @@ function majTerminee(string $taskId, string $userId): void {
     if (!$t) return;
     $n = row('SELECT COUNT(*) AS total, COALESCE(SUM(done), 0) AS faites FROM steps WHERE task_id = ?', [$taskId]);
     $fini = (int)$n['total'] > 0 ? (int)$n['faites'] === (int)$n['total'] : (bool)$t['completed'];
-    if ($fini && !$t['done_at']) q('UPDATE tasks SET done_at = ?, done_by = ? WHERE id = ?', [now(), $userId, $taskId]);
+    if ($fini && !$t['done_at']) {
+        q('UPDATE tasks SET done_at = ?, done_by = ? WHERE id = ?', [now(), $userId, $taskId]);
+        $x = row('SELECT title, created_by FROM tasks WHERE id = ?', [$taskId]);
+        if ($x) notify_user($x['created_by'], 'done', $taskId, $userId, '« ' . cut($x['title'], 80) . ' » est terminée');
+    }
     elseif (!$fini && $t['done_at']) q('UPDATE tasks SET done_at = NULL, done_by = NULL WHERE id = ?', [$taskId]);
 }
 // Les tâches terminées depuis plus de 7 jours quittent l'écran (elles restent dans l'historique de l'admin).

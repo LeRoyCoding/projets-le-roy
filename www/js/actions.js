@@ -1,7 +1,7 @@
 // Affichage général, clics, formulaires, temps réel et démarrage.
 'use strict';
 
-const VIEWS = { mustChange: vMustChange, corbeille: vCorbeille, journal: vJournal, login: vLogin, home: vHome, timeline: vTimeline, newTask: vNewTask, newGroup: vNewGroup, categories: vCategories, historique: vHistorique, account: vAccount };
+const VIEWS = { notifs: vNotifs, direction: vDirection, mustChange: vMustChange, corbeille: vCorbeille, journal: vJournal, login: vLogin, home: vHome, timeline: vTimeline, newTask: vNewTask, newGroup: vNewGroup, categories: vCategories, historique: vHistorique, account: vAccount };
 
 function render() {
   if (S && S.mustChange) {   // mot de passe provisoire : rien d'autre n'est accessible
@@ -12,10 +12,10 @@ function render() {
   const v = ui.view;
   const tabs = [['home', 'Accueil'], ['timeline', 'Timeline'], ['newTask', 'Tâche', 1], ['newGroup', 'Groupe', 1], ['categories', 'Catégories'],
     ...(me && canManageTrash() ? [['corbeille', 'Corbeille' + (S.corbeille ? ' (' + S.corbeille + ')' : '')]] : []),
-    ...(me && me.role === 'admin' ? [['historique', 'Historique'], ['journal', 'Journal']] : []), ['account', 'Compte']];
+    ...(me && me.role === 'admin' ? [['direction', 'Direction'], ['historique', 'Historique'], ['journal', 'Journal']] : []), ['account', 'Compte']];
   const editing = (v === 'newTask' && (ui.editId || ui.dupFrom)) || (v === 'newGroup' && ui.editGroup);
   $('#hdr').innerHTML = `${S && S.env && S.env !== 'production' ? '<div class="envbar">ENVIRONNEMENT DE TEST — les données ici ne sont pas les vraies</div>' : ''}<div class="brandbar"><div class="wrap"><div class="logo"><span class="logo-pill"><img src="${IMG.full}" alt="Le Roy – Lead Le Roy Concept"></span><span class="app">Projets</span></div>
-  ${me ? `<button class="me" data-act="nav" data-v="account"><span class="av">${ini(me)}</span><span class="nm">${esc(me.name)}</span>${me.role === 'admin' ? '<span class="role-tag">Admin</span>' : ''}</button>` : ''}</div></div>
+  ${me ? `<button class="bell ${S.alertes && (S.alertes.retard || S.alertes.nonLues) ? 'on' : ''}" data-act="nav" data-v="notifs" aria-label="À surveiller : ${S.alertes ? S.alertes.retard + ' en retard, ' + S.alertes.nonLues + ' notification(s) non lue(s)' : ''}" title="À surveiller">${emo('🔔')}${S.alertes && (S.alertes.retard + S.alertes.nonLues) ? `<span class="badge-n ${S.alertes.retard ? 'late' : ''}">${S.alertes.retard + S.alertes.nonLues}</span>` : ''}</button><button class="me" data-act="nav" data-v="account"><span class="av">${ini(me)}</span><span class="nm">${esc(me.name)}</span>${me.role === 'admin' ? '<span class="role-tag">Admin</span>' : ''}</button>` : ''}</div></div>
   ${me ? `<div class="tabsbar"><div class="wrap"><nav aria-label="Navigation principale">${tabs.map(([id, l, p]) => `<button data-act="nav" data-v="${id}" ${v === id && !editing ? 'aria-current="page"' : ''}>${p ? '<span class="plus">+</span>' : ''}${l}</button>`).join('')}</nav></div></div>` : ''}`;
   document.body.classList.toggle('env-test', !!(S && S.env && S.env !== 'production'));
   const tlScroll = $('#tl-wrap')?.scrollLeft;
@@ -44,6 +44,8 @@ function go(v, keep) {
   if (v !== 'account') ui.newKey = null;
   if (v === 'account') { loadKeys(); if (isAdmin()) loadSecurite(); }
   if (v === 'corbeille') loadTrash();
+  if (v === 'notifs') loadNotifs();
+  if (v === 'direction') { ui.direction = null; loadDirection(); }
   if (v === 'journal') { ui.audit = null; loadAudit(); }
   if (v === 'historique') loadHistorique();
   render(); window.scrollTo(0, 0);
@@ -77,6 +79,14 @@ async function loadSecurite() {
   try { const [s, b, k] = await Promise.all([api('GET', '/api/securite'), api('GET', '/api/sauvegardes'), api('GET', '/api/securite/cles')]); ui.sec = s; ui.backups = b; ui.adminKeys = k.tokens; }
   catch { /* sans importance */ }
   if (ui.view === 'account') render();
+}
+async function loadNotifs() {
+  try { ui.notifs = await api('GET', '/api/notifications'); } catch (e) { ui.notifs = { notifications: [], retard: [], bientot: [], unread: 0 }; toast(e.message); }
+  if (ui.view === 'notifs') render();
+}
+async function loadDirection() {
+  try { ui.direction = await api('GET', '/api/direction'); } catch (e) { toast(e.message); }
+  if (ui.view === 'direction') render();
 }
 async function loadTrash() {
   try { ui.trash = await api('GET', '/api/corbeille'); } catch (e) { ui.trash = { tasks: [], groups: [], jours: 90 }; toast(e.message); }
@@ -297,9 +307,10 @@ document.addEventListener('click', async e => {
       await act(() => api('DELETE', '/api/corbeille/' + b.dataset.kind + '/' + id), 'Supprimé définitivement'); loadTrash(); break;
     case 'admin-key-revoke': if (await act(() => api('DELETE', '/api/securite/cles/' + id), 'Clé révoquée')) loadSecurite(); break;
     case 'audit-more': loadAudit(true); break;
+    case 'notifs-read': await api('POST', '/api/notifications/lues', {}); await refresh(); await loadNotifs(); render(); break;
     case 'logout':
       try { await api('POST', '/api/logout', {}); } catch { /* on déconnecte quand même l'écran */ }
-      S = null; stopEvents(); ui.loginUser = null; ui.openTask = null; ui.details = null; ui.filter = []; ui.tlGroup = 'all'; ui.search = ''; ui.cat = ''; ui.newKey = null; ui.keys = []; ui.sec = null; ui.backups = null; ui.adminKeys = null; ui.trash = null; ui.audit = null; ui.pwdErr = '';
+      S = null; stopEvents(); ui.loginUser = null; ui.openTask = null; ui.details = null; ui.filter = []; ui.tlGroup = 'all'; ui.search = ''; ui.cat = ''; ui.newKey = null; ui.keys = []; ui.sec = null; ui.backups = null; ui.adminKeys = null; ui.trash = null; ui.audit = null; ui.notifs = null; ui.direction = null; ui.pwdErr = '';
       await loadLogin(); render(); break;
   }
 });
@@ -359,6 +370,10 @@ async function onSubmit(f) {
       downloadFile(`projets-le-roy-${iso(today())}.sql.gz`, await res.blob(), 'application/gzip');
       $('#bk-pwd').value = ''; toast('Sauvegarde téléchargée');
     } catch (err) { toast(err.message); }
+  }
+  if (f.id === 'prefs-form') {
+    try { await api('PUT', '/api/moi', { email: $('#pf-email').value.trim(), notifyDaily: $('#pf-daily').checked }); await refresh(); render(); toast('Préférences enregistrées'); }
+    catch (err) { toast(err.message); }
   }
   if (f.id === 'audit-form') { ui.auditAction = $('#au-action').value; ui.auditQ = $('#au-q').value.trim(); ui.audit = null; render(); loadAudit(); }
   if (f.id === 'task-form') {

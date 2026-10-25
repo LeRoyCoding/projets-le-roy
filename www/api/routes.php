@@ -28,6 +28,8 @@ function table_routes(): array {
     $add('POST', '/api/logout', 'none', 'r_logout', ['free']);
     $add('GET', '/api/rev', 'user', fn($c) => ['rev' => (int)(getSetting('rev') ?? 0)]);
     $add('GET', '/api/state', 'user', 'r_state', ['free']);
+    $add('GET', '/api/notifications', 'user', 'r_notifications');
+    $add('POST', '/api/notifications/lues', 'user', 'r_notifications_read');
 
     routes_taches($add);
     routes_groupes($add);
@@ -153,6 +155,8 @@ function r_state(array $c): array {
         'archiveJours' => ARCHIVE_JOURS,
         'connecteur' => ['actif' => getSetting('connecteur_internet') === '1'],
         'corbeille' => trash_count($me),
+        'alertes' => (function () use ($me) { $d = deadlines_for($me); return ['nonLues' => (int)val('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read_at IS NULL', [$me['id']]), 'retard' => count($d['late']), 'bientot' => count($d['soon'])]; })(),
+        'prefs' => (function () use ($me) { $u = row('SELECT email, notify_daily FROM users WHERE id = ?', [$me['id']]); return ['email' => $u['email'], 'notifyDaily' => (bool)$u['notify_daily']]; })(),
         'tasks' => array_map(function ($t) use ($me, $admin, $mine, $commentCounts, $steps) {
             $role = $admin ? 'admin' : ($mine[$t['group_id']] ?? null);
             $manager = in_array($role, ['admin', 'responsable'], true);

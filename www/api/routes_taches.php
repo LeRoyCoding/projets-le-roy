@@ -91,8 +91,6 @@ function writeSteps(string $taskId, array $steps, string $userId): void {
     foreach ($existing as $id => $_) if (!isset($keep[$id])) q('DELETE FROM steps WHERE id = ?', [$id]);
 }
 
-function cut(string $s, int $n = 60): string { return mb_strlen($s) > $n ? mb_substr($s, 0, $n - 1) . '…' : $s; }
-function frd(string $d): string { return implode('/', array_reverse(explode('-', $d))); }
 
 // Résumé lisible des changements, avec l'ancienne et la nouvelle valeur.
 function describeChanges(array $before, array $d): array {
@@ -121,6 +119,7 @@ function r_task_create(array $c): array {
         writeSteps($id, $d['steps'], $me['id']);
         majTerminee($id, $me['id']);
         logAct($id, $me['id'], 'creation', 'tâche créée' . ($me['viaToken'] ? ' (clé d\'accès)' : ''));
+        notify_user($d['ownerId'], 'assigned', $id, $me['id'], $me['name'] . ' vous a attribué « ' . cut($d['title'], 80) . ' »');
     });
     return ['id' => $id];
 }
@@ -139,6 +138,7 @@ function r_task_update(array $c): array {
         foreach ($before as $i => $s) if (!$diff && $s['label'] !== $d['steps'][$i]['label']) $diff = true;
         if ($diff) $changes[] = 'étapes modifiées (' . count($before) . ' → ' . count($d['steps']) . ')';
         if ($changes) logAct($t['id'], $me['id'], 'modification', implode(' ; ', $changes));
+        if ($d['ownerId'] && $d['ownerId'] !== $t['owner_id']) notify_user($d['ownerId'], 'assigned', $t['id'], $me['id'], $me['name'] . ' vous a attribué « ' . cut($d['title'], 80) . ' »');
     });
     return ['ok' => true];
 }
@@ -240,6 +240,7 @@ function r_comment_add(array $c): array {
     $body = str($c['b']['body'] ?? null, 3000, 'Le commentaire', true);
     $id = newId();
     q('INSERT INTO comments (id, task_id, user_id, body, created_at) VALUES (?, ?, ?, ?, ?)', [$id, $t['id'], $c['me']['id'], $body, now()]);
+    foreach (array_unique(array_filter([$t['owner_id'], $t['created_by']])) as $dest) notify_user($dest, 'comment', $t['id'], $c['me']['id'], $c['me']['name'] . ' a commenté « ' . cut($t['title'], 60) . ' » : ' . cut($body, 120));
     return ['id' => $id];
 }
 function r_comment_delete(array $c): ?array {

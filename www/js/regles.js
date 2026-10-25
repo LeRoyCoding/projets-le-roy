@@ -14,7 +14,7 @@ const ui = {
   editId: null, dupFrom: null, editGroup: null, presetGroup: null,
   openTask: null, confirmDel: false, details: null,
   editUser: null, editCat: null, catDel: null, newKey: null, keys: [], historyOpen: false,
-  hist: null, histQ: '', trash: null, audit: null, auditQ: '', auditAction: '', sec: null, backups: null, adminKeys: null, newKeyInfo: null, showReset: null,
+  hist: null, histQ: '', trash: null, audit: null, notifs: null, direction: null, auditQ: '', auditAction: '', sec: null, backups: null, adminKeys: null, newKeyInfo: null, showReset: null,
   pwdErr: '', busy: false
 };
 

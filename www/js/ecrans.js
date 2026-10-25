@@ -298,6 +298,11 @@ function vAccount() {
   <label class="field"><span>Nouveau mot de passe</span><input type="password" id="p-new" autocomplete="new-password" minlength="12"></label></div>
   ${ui.pwdErr ? `<p class="err">${esc(ui.pwdErr)}</p>` : ''}
   <div class="actions"><button class="btn primary">Mettre à jour</button></div></form>
+ <form id="prefs-form" class="panel form"><h3>Mes notifications</h3>
+  <p class="hint">La cloche en haut de l'écran signale vos retards et ce qui vous concerne. Vous pouvez aussi recevoir, chaque matin, un résumé par e-mail (uniquement s'il y a quelque chose à signaler).</p>
+  <div class="row2"><label class="field"><span>Mon adresse e-mail</span><input type="email" id="pf-email" maxlength="190" value="${esc((S.prefs && S.prefs.email) || '')}" placeholder="(facultative)"></label>
+  <label class="toggle" style="align-self:end"><input type="checkbox" id="pf-daily" ${S.prefs && S.prefs.notifyDaily ? 'checked' : ''}><span>Recevoir le résumé quotidien par e-mail</span></label></div>
+  <div class="actions"><button class="btn primary sm">Enregistrer</button></div></form>
  <div class="panel"><h3>Affichage</h3><div class="pick" role="radiogroup" aria-label="Thème">
   ${[['auto', '🖥️', 'Comme l\'ordinateur'], ['light', '☀️', 'Clair'], ['dark', '🌙', 'Sombre']].map(([v, e, l]) => `<label><input type="radio" name="theme" value="${v}" ${theme === v ? 'checked' : ''}><span class="opt">${emo(e)}${l}</span></label>`).join('')}
  </div></div>
@@ -476,4 +481,34 @@ function vJournal() {
    <input type="search" id="au-q" placeholder="Rechercher (nom, détail)" value="${esc(ui.auditQ)}" aria-label="Rechercher"><button class="btn sm">Filtrer</button></form></div>
   <div class="panel" style="margin-top:16px">${!d ? '<p class="hint">Chargement…</p>' : `<ul class="audit">${d.events.map(e => `<li class="${/echec|bloquee|refusee|purg/.test(e.action) ? 'bad' : ''}"><span class="h-when">${esc(stampFr(e.at))}</span><span><b>${esc(lib(e.action))}</b> · ${esc(e.userName || '—')}${e.ip ? ' · <span class="mono small">' + esc(e.ip) + '</span>' : ''}${e.detail ? '<br><span class="hint">' + esc(e.detail) + '</span>' : ''}</span></li>`).join('') || '<li class="hint">Rien à afficher.</li>'}</ul>
    ${d.events.length >= 100 ? '<div class="actions"><button class="btn sm" data-act="audit-more">Voir plus ancien</button></div>' : ''}`}</div></section>`;
+}
+
+/* ---------- Cloche : retards, échéances proches, notifications ---------- */
+function vNotifs() {
+  const d = ui.notifs;
+  if (!d) return `<section class="form-page"><p class="eyebrow">Pour vous</p><h1>À surveiller</h1><div class="panel"><p class="hint">Chargement…</p></div></section>`;
+  const tache = (t, extra) => `<li><button class="trow st-${extra}" data-act="open-task" data-id="${esc(t.id)}"><span class="tt"><b>${esc(t.title)}</b><span class="hint">fin ${fmt(t.end)}</span></span></button></li>`;
+  const lib = { assigned: '📌', comment: '💬', done: '✅' };
+  return `<section class="form-page"><p class="eyebrow">Pour vous</p><h1>À surveiller</h1>
+  <div class="panel"><h3>${emo('🚨')} En retard (${d.retard.length})</h3><ul class="notif">${d.retard.map(t => `<li><button class="link" data-act="open-task" data-id="${esc(t.id)}"><b>${esc(t.title)}</b></button> <span class="hint">— ${t.jours} jour${t.jours > 1 ? 's' : ''} de retard (fin le ${fmt(t.end)})</span></li>`).join('') || '<li class="hint">Rien en retard : bravo !</li>'}</ul></div>
+  <div class="panel" style="margin-top:16px"><h3>${emo('⚠️')} À faire dans les 7 jours (${d.bientot.length})</h3><ul class="notif">${d.bientot.map(t => `<li><button class="link" data-act="open-task" data-id="${esc(t.id)}"><b>${esc(t.title)}</b></button> <span class="hint">— ${t.jours === 0 ? 'aujourd\'hui' : 'dans ' + t.jours + ' jour' + (t.jours > 1 ? 's' : '')} (${fmt(t.end)})</span></li>`).join('') || '<li class="hint">Rien d\'urgent.</li>'}</ul></div>
+  <div class="panel" style="margin-top:16px"><h3>${emo('🔔')} Notifications ${d.unread ? `<small class="count">${d.unread} non lue${d.unread > 1 ? 's' : ''}</small>` : ''}</h3>
+   <ul class="notif">${d.notifications.map(n => `<li class="${n.readAt ? '' : 'unread'}"><span>${emo(lib[n.kind] || '🔔')}</span><span>${n.taskId && S.tasks.some(t => t.id === n.taskId) ? `<button class="link" data-act="open-task" data-id="${esc(n.taskId)}">${esc(n.text)}</button>` : esc(n.text)}<br><span class="hint">${esc(fmtStamp(n.at))}</span></span></li>`).join('') || '<li class="hint">Aucune notification pour l\'instant. Vous serez prévenu(e) quand une tâche vous est attribuée, commentée ou terminée.</li>'}</ul>
+   ${d.unread ? '<div class="actions"><button class="btn sm" data-act="notifs-read">Tout marquer comme lu</button></div>' : ''}</div></section>`;
+}
+
+/* ---------- Tableau de bord Direction (administrateur, lecture seule) ---------- */
+function vDirection() {
+  const d = ui.direction;
+  if (!d) return `<section class="form-page"><p class="eyebrow">Direction</p><h1>Tableau de bord</h1><div class="panel"><p class="hint">Chargement…</p></div></section>`;
+  const t = d.totaux, max = Math.max(1, ...d.semaines.flatMap(s => [s.creees, s.terminees]));
+  const kpi = (n, l, cls = '') => `<div class="kpi ${cls}"><b>${n}</b><span>${l}</span></div>`;
+  return `<section class="form-page wide"><p class="eyebrow">Direction</p><h1>Tableau de bord</h1>
+  <div class="kpis">${kpi(t.ouvertes, 'tâches en cours')}${kpi(t.retard, 'en retard', t.retard ? 'bad' : '')}${kpi(t.sous7j, 'échéance sous 7 jours')}${kpi(t.terminees30j, 'terminées (30 j)', 'ok')}${kpi(t.creees30j, 'créées (30 j)')}</div>
+  <div class="panel" style="margin-top:16px"><h3>Par groupe</h3><div class="tbl"><table><thead><tr><th>Groupe</th><th>En cours</th><th>En retard</th><th>Sous 7 j</th><th>Terminées (30 j)</th><th>Pire retard</th></tr></thead><tbody>
+   ${d.groupes.map(g => `<tr><td><span class="gtile sm" style="--g:${esc(g.color)}">${gIcon(g.icon, '')}</span> ${esc(g.name)}${!g.ouvertes && !g.terminees30j ? ' <span class="hint">(vide)</span>' : ''}</td><td>${g.ouvertes}</td><td class="${g.retard ? 'bad' : ''}">${g.retard}</td><td>${g.sous7j}</td><td>${g.terminees30j}</td><td>${g.pireRetard ? g.pireRetard + ' j' : '—'}</td></tr>`).join('')}</tbody></table></div></div>
+  <div class="panel" style="margin-top:16px"><h3>Par personne</h3><div class="tbl"><table><thead><tr><th>Personne</th><th>En cours</th><th>En retard</th><th>Terminées (30 j)</th></tr></thead><tbody>
+   ${d.personnes.map(p => `<tr><td>${esc(p.name)}</td><td>${p.ouvertes}</td><td class="${p.retard ? 'bad' : ''}">${p.retard}</td><td>${p.terminees30j}</td></tr>`).join('')}</tbody></table></div></div>
+  <div class="panel" style="margin-top:16px"><h3>8 dernières semaines</h3><div class="weeks">${d.semaines.map(s => `<div class="wk"><div class="bars"><span class="b c" style="height:${Math.round(s.creees / max * 100)}%" title="${s.creees} créées"></span><span class="b t" style="height:${Math.round(s.terminees / max * 100)}%" title="${s.terminees} terminées"></span></div><small>${fmt(s.debut)}</small><small>${s.creees} / ${s.terminees}</small></div>`).join('')}</div>
+   <p class="hint"><span class="dot c"></span> créées · <span class="dot t"></span> terminées — par semaine (lundi). Les tâches à la corbeille ne sont pas comptées.</p></div></section>`;
 }

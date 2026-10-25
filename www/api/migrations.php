@@ -182,4 +182,21 @@ return [
         fn(PDO $p) => schema_add_column($p, 'groupes', 'deleted_by', 'VARCHAR(32) NULL'),
         "ALTER TABLE activity MODIFY detail TEXT NOT NULL",
     ]],
+
+    // 5 — notifications utiles (tâche attribuée, commentaire, tâche terminée) ; paramètres d'envoi du résumé quotidien
+    ['breaking' => false, 'sql' => [
+        "CREATE TABLE IF NOT EXISTS notifications (
+            id VARCHAR(32) NOT NULL PRIMARY KEY,
+            user_id VARCHAR(32) NOT NULL,
+            kind VARCHAR(20) NOT NULL,
+            task_id VARCHAR(32) NULL,
+            actor_id VARCHAR(32) NULL,
+            text VARCHAR(300) NOT NULL,
+            created_at DATETIME NOT NULL,
+            read_at DATETIME NULL,
+            KEY notif_user (user_id, read_at, created_at),
+            CONSTRAINT n_u FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            CONSTRAINT n_t FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+    ]],
 ];

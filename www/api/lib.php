@@ -6,3 +6,5 @@ require_once __DIR__ . '/schema.php';
 require_once __DIR__ . '/backup.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/permissions.php';
+require_once __DIR__ . '/notifications.php';
+require_once __DIR__ . '/auth_provider.php';

@@ -19,6 +19,7 @@ function routes_admin(callable $add): void {
     $add('DELETE', '/api/securite/cles/{id}', 'admin', 'r_admin_token_revoke');
     $add('POST', '/api/securite/deconnecter/{id}', 'admin', 'r_user_logout_all');
     $add('GET', '/api/audit', 'admin', 'r_audit');
+    $add('GET', '/api/direction', 'admin', 'r_direction');
     $add('GET', '/api/sauvegardes', 'admin', 'r_backups');
     $add('POST', '/api/sauvegarde', 'admin', 'r_backup_download');
 }
@@ -70,19 +71,11 @@ function r_user_create(array $c): array {
     $role = ($b['role'] ?? '') === 'admin' ? 'admin' : 'user';
     $email = valid_email($b['email'] ?? null);
     if (val('SELECT 1 FROM users WHERE name = ?', [$name]) !== null) fail(400, 'Ce nom est déjà utilisé.');
-    $id = newId();
-    tx(function () use ($id, $name, $password, $role, $email) {
+    $id = tx(function () use ($name, $password, $role, $email) {
         // Mot de passe provisoire : la personne devra en choisir un autre dès sa première connexion.
-        q('INSERT INTO users (id, name, password_hash, role, email, must_change, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)', [$id, $name, hashPwd($password), $role, $email, now()]);
-        if ($role === 'user') {
-            // Chaque utilisateur reçoit son groupe privé « Perso » (dont il est responsable).
-            $n = (int)val('SELECT COUNT(*) FROM groupes');
-            $gid = newId();
-            $pos = (int)val('SELECT COALESCE(MAX(position), 0) + 1 FROM groupes');
-            q('INSERT INTO groupes (id, name, icon, color, position, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)', [$gid, 'Perso', '🏡', GROUP_COLORS[2 + ($n % 4)], $pos, now(), $id]);
-            q("INSERT INTO group_members (group_id, user_id, role) VALUES (?, ?, 'responsable')", [$gid, $id]);
-        }
+        $id = provision_user($name, $role, hashPwd($password), $email);
         audit('compte.cree', 'user', $id, "$name ($role)");
+        return $id;
     });
     return ['id' => $id];
 }
@@ -239,4 +232,38 @@ function r_backup_download(array $c): array {
     return ['__stream' => ['type' => 'application/gzip', 'filename' => 'projets-le-roy-' . gmdate('Ymd-His') . '.sql.gz', 'fn' => function () {
         backup_stream_gzip(db(), ['created_at' => now() . ' UTC', 'reason' => 'telechargement', 'schema_version' => (int)(getSetting('schema_version') ?? 0)]);
     }]];
+}
+
+/* =====================  TABLEAU DE BORD DIRECTION (lecture seule)  ===================== */
+function r_direction(array $c): array {
+    $today = todayIso();
+    $base = 'FROM tasks t JOIN groupes g ON g.id = t.group_id WHERE t.deleted_at IS NULL AND g.deleted_at IS NULL';
+    $g = fn(string $x) => (int)val("SELECT COUNT(*) $base AND $x", [$today]);
+    $tot = ['ouvertes' => (int)val("SELECT COUNT(*) $base AND t.done_at IS NULL"),
+        'retard' => $g("t.done_at IS NULL AND t.end_date < ?"),
+        'sous7j' => (int)val("SELECT COUNT(*) $base AND t.done_at IS NULL AND t.end_date >= ? AND t.end_date <= DATE_ADD(?, INTERVAL 7 DAY)", [$today, $today]),
+        'terminees30j' => (int)val("SELECT COUNT(*) $base AND t.done_at > ?", [gmdate('Y-m-d H:i:s', time() - 30 * 86400)]),
+        'creees30j' => (int)val("SELECT COUNT(*) $base AND t.created_at > ?", [gmdate('Y-m-d H:i:s', time() - 30 * 86400)])];
+    $groupes = rows("SELECT g.id, g.name, g.icon, g.color,
+            SUM(t.done_at IS NULL) AS ouvertes,
+            SUM(t.done_at IS NULL AND t.end_date < ?) AS retard,
+            SUM(t.done_at IS NULL AND t.end_date >= ? AND t.end_date <= DATE_ADD(?, INTERVAL 7 DAY)) AS sous7j,
+            SUM(t.done_at > ?) AS terminees30j,
+            MAX(CASE WHEN t.done_at IS NULL AND t.end_date < ? THEN DATEDIFF(?, t.end_date) END) AS pireRetard
+        FROM groupes g LEFT JOIN tasks t ON t.group_id = g.id AND t.deleted_at IS NULL WHERE g.deleted_at IS NULL GROUP BY g.id, g.name, g.icon, g.color ORDER BY g.position",
+        [$today, $today, $today, gmdate('Y-m-d H:i:s', time() - 30 * 86400), $today, $today]);
+    $personnes = rows("SELECT u.id, u.name,
+            SUM(t.done_at IS NULL) AS ouvertes, SUM(t.done_at IS NULL AND t.end_date < ?) AS retard, SUM(t.done_at > ?) AS terminees30j
+        FROM users u LEFT JOIN tasks t ON t.owner_id = u.id AND t.deleted_at IS NULL WHERE u.active = 1 GROUP BY u.id, u.name ORDER BY retard DESC, u.name",
+        [$today, gmdate('Y-m-d H:i:s', time() - 30 * 86400)]);
+    $semaines = [];
+    for ($i = 7; $i >= 0; $i--) {
+        $debut = gmdate('Y-m-d H:i:s', strtotime('monday this week 00:00:00 UTC') - $i * 7 * 86400); $fin = gmdate('Y-m-d H:i:s', strtotime($debut . ' UTC') + 7 * 86400);
+        $semaines[] = ['debut' => substr($debut, 0, 10),
+            'creees' => (int)val("SELECT COUNT(*) $base AND t.created_at >= ? AND t.created_at < ?", [$debut, $fin]),
+            'terminees' => (int)val("SELECT COUNT(*) $base AND t.done_at >= ? AND t.done_at < ?", [$debut, $fin])];
+    }
+    $cast = fn(array $l, array $cols) => array_map(function ($r) use ($cols) { foreach ($cols as $k) $r[$k] = (int)$r[$k]; return $r; }, $l);
+    return ['totaux' => $tot, 'groupes' => $cast($groupes, ['ouvertes', 'retard', 'sous7j', 'terminees30j', 'pireRetard']),
+            'personnes' => $cast($personnes, ['ouvertes', 'retard', 'terminees30j']), 'semaines' => $semaines];
 }

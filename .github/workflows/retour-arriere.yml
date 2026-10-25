@@ -43,10 +43,14 @@ jobs:
       - name: Retour arrière
         env:
           DEPLOY_ENV_FILE: ${{ runner.temp }}/cible.env
+          IN_CIBLE: ${{ inputs.cible }}
+          IN_VERSION: ${{ inputs.version }}
+          IN_FORCER: ${{ inputs.forcer }}
         run: |
-          ARGS="--cible=${{ inputs.cible }}"
-          if [ -n "${{ inputs.version }}" ]; then ARGS="$ARGS --vers=${{ inputs.version }}"; fi
-          if [ "${{ inputs.forcer }}" = "true" ]; then ARGS="$ARGS --forcer"; fi
+          case "$IN_VERSION" in *[!A-Za-z0-9._-]*) echo "Identifiant de version invalide"; exit 2;; esac
+          ARGS="--cible=$IN_CIBLE"
+          if [ -n "$IN_VERSION" ]; then ARGS="$ARGS --vers=$IN_VERSION"; fi
+          if [ "$IN_FORCER" = "true" ]; then ARGS="$ARGS --forcer"; fi
           bash deploiement/retour-arriere.sh $ARGS
       - name: Nettoyer
         if: always()

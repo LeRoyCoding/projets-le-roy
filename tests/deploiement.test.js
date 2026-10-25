@@ -19,6 +19,7 @@ const ecrireConfig = (extra = {}) => fs.writeFileSync(path.join(base, 'config', 
   `<?php return ${JSON.stringify({ db_host: '127.0.0.1', db_name: nomBase, db_user: process.env.LR_DB_USER || 'root', db_pass: process.env.LR_DB_PASS || '', data_dir: data, env: 'test', ...extra }).replace(/^\{/, '[').replace(/\}$/, ']').replace(/"([a-z_]+)":/g, "'$1'=>")};\n`);
 const deployer = (args = [], env = {}) => sh('bash', [path.join(RACINE, 'deploiement', 'deployer.sh'), '--cible=test', '--sans-verification-web', ...args], { env: { ...process.env, DEPLOY_ENV_FILE: envFile, ...env } });
 const retour = (args = []) => sh('bash', [path.join(RACINE, 'deploiement', 'retour-arriere.sh'), '--cible=test', ...args], { env: { ...process.env, DEPLOY_ENV_FILE: envFile } });
+const cibleSchema = () => php('migrer.php').stdout.match(/sur (\d+)/)[1];
 const php = (script, args = []) => sh('php', [path.join(base, 'current', 'outils', script), ...args]);
 
 before(() => {
@@ -98,7 +99,7 @@ test('migration en attente : jamais appliquée sans --migrer ; avec --migrer : s
   const avec = deployer(['--source=' + src2, '--migrer']);
   assert.equal(avec.status, 0, avec.stdout + avec.stderr);
   assert.match(avec.stdout, /Mise à jour de la base/);
-  assert.equal(sql("SELECT v FROM settings WHERE k = 'schema_version'"), '4');
+  assert.equal(sql("SELECT v FROM settings WHERE k = 'schema_version'"), cibleSchema());
   assert.ok(fs.readdirSync(path.join(data, 'sauvegardes')).some(f => /avant-migration.*manifest/.test(f)));
 });
 
@@ -125,14 +126,14 @@ test('code invalide : refusé avant tout envoi', () => {
 
 test('retour arrière refusé si la base a reçu une migration que l\'ancien code ne comprend pas', () => {
   // Simule une version future dont la migration n° 5 est « cassante » : les versions de code qui ne la connaissent pas ne peuvent plus servir la base.
-  sh('mysql', [...MY, nomBase, '-e', "UPDATE settings SET v = '5' WHERE k = 'schema_version'; INSERT INTO settings (k, v) VALUES ('schema_min_code', '5') ON DUPLICATE KEY UPDATE v = '5'"]);
+  sh('mysql', [...MY, nomBase, '-e', "UPDATE settings SET v = '" + (Number(cibleSchema()) + 1) + "' WHERE k = 'schema_version'; INSERT INTO settings (k, v) VALUES ('schema_min_code', '" + (Number(cibleSchema()) + 1) + "') ON DUPLICATE KEY UPDATE v = '" + (Number(cibleSchema()) + 1) + "'"]);
   const avant = lien();
   const r = retour();
   assert.notEqual(r.status, 0);
   assert.match(r.stderr, /REFUS/);
   assert.equal(lien(), avant);
   assert.equal(retour(['--forcer']).status, 0, 'avec --forcer (en connaissance de cause)');
-  sh('mysql', [...MY, nomBase, '-e', "DELETE FROM settings WHERE k = 'schema_min_code'; UPDATE settings SET v = '4' WHERE k = 'schema_version'"]);
+  sh('mysql', [...MY, nomBase, '-e', "DELETE FROM settings WHERE k = 'schema_min_code'; UPDATE settings SET v = '" + cibleSchema() + "' WHERE k = 'schema_version'"]);
 });
 
 test('test d\'accès après bascule : en cas d\'échec, retour automatique à la version précédente', async () => {
