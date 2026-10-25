@@ -16,3 +16,7 @@ Thumbs.db
 # Outil de tunnel téléchargé par ouvrir-pour-chatgpt.bat
 outils/cloudflared.exe
 outils/cloudflared
+
+# Identifiants de la base OVH : uniquement sur l'hébergement, jamais dans Git
+www/config.php
+export-ovh*.sql

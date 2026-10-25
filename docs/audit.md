@@ -1,5 +1,8 @@
 # Audit et améliorations — octobre 2026
 
+> **Note :** ce rapport a été écrit quand l'application tournait sur un PC du bureau (serveur Node.js, scripts `.bat`).
+> Elle a depuis été réécrite en PHP + MySQL pour l'hébergement OVHcloud (voir le README) ; les fonctions décrites ci-dessous ont été conservées.
+
 Revue complète de l'application (serveur, base de données, interface, scripts Windows), suivie des corrections
 et des nouveautés demandées. Tout ce qui est listé ici est **fait et vérifié** sauf mention contraire.
 

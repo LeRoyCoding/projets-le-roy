@@ -1,15 +1,15 @@
 # Feuille de route — ce qui manque pour un outil « parfait »
 
 Comparaison avec les outils de gestion de projets du marché (Asana, Monday, ClickUp, Microsoft Planner / Project,
-Notion, Trello, Jira), en tenant compte du contexte Le Roy : petite équipe, réseau du bureau, utilisateurs non
+Notion, Trello, Jira), en tenant compte du contexte Le Roy : petite équipe, utilisateurs non
 informaticiens, devis et chantiers avicoles, Business Central.
 
 ## Ce que Projets Le Roy fait déjà bien
 
 Tâches avec étapes et avancement, groupes communs ou privés, catégories, timeline type Gantt, temps réel entre les
 postes, commentaires, qui a validé chaque étape et quand, historique des tâches terminées (admin), recherche et filtres,
-export Excel, sauvegardes automatiques, mode sombre, tablette, lien avec Claude et ChatGPT. Et surtout : simple,
-en français, gratuit, et les données restent au bureau.
+export Excel, sauvegardes automatiques, mode sombre, tablette, lien avec Claude et ChatGPT. Hébergée chez OVHcloud depuis octobre 2026 (accessible partout, avec QR code d'accès). Et surtout : simple,
+en français et sans abonnement logiciel.
 
 ## Ce qui manque, par priorité
 
@@ -42,12 +42,12 @@ en français, gratuit, et les données restent au bureau.
 | Manque | Proposition |
 |---|---|
 | **Business Central** | Créer une tâche depuis un devis BC, retrouver la fiche client, suivre le montant. *Prévu dans le cahier des charges.* |
-| **Accès hors du bureau** | Consulter depuis un chantier ou en déplacement (VPN de l'entreprise, ou accès sécurisé type Cloudflare Access). |
+| **Double authentification** | Le site étant sur Internet, ajouter un second facteur (code par application) pour l'administrateur. |
 | **Connexion Microsoft 365** | Se connecter avec son compte Microsoft (SSO) plutôt qu'un mot de passe dédié ; double authentification. |
 | **Suivi du temps / charge** | Temps passé par tâche, charge par personne et par semaine. |
 | **Rôles intermédiaires** | « Responsable de groupe » qui gère son groupe sans être administrateur. |
-| **Sauvegarde externalisée automatique** | Copie quotidienne vers un NAS ou un dossier OneDrive / SharePoint. |
-| **Hors connexion** | Consulter ses tâches même si le PC serveur est momentanément injoignable. |
+| **Sauvegarde externalisée automatique** | Copie quotidienne de la base hors d'OVH (OneDrive / SharePoint). |
+| **Hors connexion** | Consulter ses tâches même sans Internet (cache sur la tablette). |
 
 ## Recommandation
 

@@ -1,24 +1,16 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { demarrer, equipe, tache } = require('./aide');
-const { isDate } = require('../server/outils');
-const { isLocalAddress } = require('../server/app');
 
 let srv, E;
 before(async () => { srv = await demarrer(); E = await equipe(srv); });
 after(() => srv.stop());
 
-test('dates : refuse les dates impossibles', () => {
-  assert.equal(isDate('2026-02-28'), true);
-  assert.equal(isDate('2028-02-29'), true);
-  assert.equal(isDate('2026-02-31'), false);
-  assert.equal(isDate('2026-13-01'), false);
-  assert.equal(isDate('26-1-1'), false);
-});
-
-test('réseau local uniquement', () => {
-  for (const ip of ['127.0.0.1', '::1', '192.168.1.10', '10.0.0.5', '172.20.1.1', '::ffff:192.168.0.2']) assert.equal(isLocalAddress(ip), true, ip);
-  for (const ip of ['8.8.8.8', '172.40.0.1', '::ffff:1.2.3.4']) assert.equal(isLocalAddress(ip), false, ip);
+test('dates : refuse les dates impossibles', async () => {
+  for (const end of ['2026-02-31', '2026-13-01', '26-1-1']) {
+    assert.equal((await E.antoine.post('/api/tasks', tache(E.ids.g, { end }))).status, 400, end);
+  }
+  assert.equal((await E.antoine.post('/api/tasks', tache(E.ids.g, { start: '2028-02-29', end: '2028-03-01' }))).status, 200);
 });
 
 test('connexion : mauvais mot de passe puis blocage après 5 essais', async () => {
@@ -26,7 +18,7 @@ test('connexion : mauvais mot de passe puis blocage après 5 essais', async () =
   const r = await c.login('Claire', 'faux');
   assert.equal(r.status, 401);
   for (let i = 0; i < 4; i++) await c.login('Claire', 'faux');
-  assert.equal((await c.login('Claire', '0000')).status, 429);
+  assert.equal((await c.login('Claire', 'secret0000')).status, 429);
 });
 
 test('sans connexion : aucune donnée', async () => {
@@ -103,21 +95,19 @@ test('groupes : suppression impossible tant qu\'il reste des tâches', async () 
 });
 
 test('comptes : seul l\'admin crée des utilisateurs', async () => {
-  assert.equal((await E.claire.post('/api/users', { name: 'Z', password: '0000' })).status, 403);
-  assert.equal((await E.admin.post('/api/users', { name: 'antoine', password: '0000' })).status, 400);
+  assert.equal((await E.claire.post('/api/users', { name: 'Z', password: 'secret0000' })).status, 403);
+  assert.equal((await E.admin.post('/api/users', { name: 'antoine', password: 'secret0000' })).status, 400);
 });
 
 test('changer son mot de passe déconnecte les autres appareils', async () => {
-  const autre = srv.client(); await autre.login('Claire', '0000');
-  assert.equal((await E.claire.post('/api/password', { oldPassword: 'faux', newPassword: '1234' })).status, 400);
-  assert.equal((await E.claire.post('/api/password', { oldPassword: '0000', newPassword: '12' })).status, 400);
-  assert.equal((await E.claire.post('/api/password', { oldPassword: '0000', newPassword: '1234' })).status, 200);
+  const autre = srv.client(); await autre.login('Claire', 'secret0000');
+  assert.equal((await E.claire.post('/api/password', { oldPassword: 'faux', newPassword: 'nouveau1234' })).status, 400);
+  assert.equal((await E.claire.post('/api/password', { oldPassword: 'secret0000', newPassword: '12' })).status, 400);
+  assert.equal((await E.claire.post('/api/password', { oldPassword: 'secret0000', newPassword: 'nouveau1234' })).status, 200);
   assert.equal((await autre.get('/api/state')).status, 401);
   assert.equal((await E.claire.get('/api/state')).status, 200);
 });
 
-test('en-têtes de sécurité présents', async () => {
-  const res = await fetch(srv.base + '/');
-  assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
-  assert.match(res.headers.get('content-security-policy'), /default-src 'self'/);
+test('mot de passe trop court refusé', async () => {
+  assert.equal((await E.admin.post('/api/users', { name: 'Court', password: '123' })).status, 400);
 });

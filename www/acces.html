@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Accès — Projets Le Roy</title><link rel="stylesheet" href="/fonts/polices.css">
+<style>
+body{margin:0;font-family:Barlow,Arial,sans-serif;color:#232120;background:#fff;display:grid;place-items:center;min-height:100vh}
+main{text-align:center;padding:32px;max-width:640px}
+img{height:64px}
+h1{font-family:"Barlow Condensed",Arial,sans-serif;font-size:40px;margin:16px 0 4px;text-transform:uppercase;letter-spacing:.03em}
+p{font-size:18px;margin:8px 0;color:#444}
+.qr{width:300px;height:300px;margin:20px auto;border:2px solid #C4122F;border-radius:12px;padding:12px;box-sizing:content-box}
+.qr svg{width:100%;height:100%}
+.url{font-family:"IBM Plex Mono",Consolas,monospace;font-size:26px;font-weight:600;color:#C4122F;margin:8px 0 20px;word-break:break-all}
+.aide{font-size:14px;color:#666;border-top:1px solid #ddd;padding-top:14px}
+@media print{.noprint{display:none}}
+</style></head><body><main>
+<img src="/img/logo-complet.png" alt="Le Roy – Lead Le Roy Concept">
+<h1>Projets Le Roy</h1>
+<p>Scannez avec le téléphone ou la tablette, ou tapez l'adresse dans le navigateur :</p>
+<div class="qr" id="qr" role="img" aria-label="QR code de l'adresse"></div>
+<p class="url" id="url"></p>
+<p class="aide">Ensuite : menu du navigateur → « Ajouter à l'écran d'accueil » ou « Installer l'application ». Vous aurez besoin de votre nom et de votre mot de passe.</p>
+<p class="aide noprint">Pour imprimer cette fiche : <b>Ctrl + P</b>.</p>
+</main>
+<script src="/js/vendor/qrcode.js"></script>
+<script src="/js/acces.js"></script>
+</body></html>

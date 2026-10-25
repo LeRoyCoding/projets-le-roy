@@ -12,20 +12,14 @@ Le fichier `prototype.html` à la racine est la maquette validée. Il fait réf�
 Reproduire fidèlement ce rendu. Ne pas réinventer le design.
 
 ## Architecture cible
-- Un petit serveur **Node.js** (Express) qui tourne sur un PC du bureau, toujours allumé.
-- Base de données **SQLite** (un seul fichier, facile à sauvegarder).
-- Front-end : HTML/CSS/JS sans framework lourd, servi par le serveur, installable comme **PWA** (manifest + icône Le Roy).
-- Les collègues ouvrent `http://<IP-du-PC>:3000` depuis leur navigateur, puis « Installer l'application ».
-- Mises à jour en temps réel souhaitables (rafraîchissement automatique ou Server-Sent Events) pour que chacun voie les changements des autres.
-- Lancement simple : `npm install` puis `npm start`. Prévoir un script pour démarrer automatiquement avec Windows.
+- **Hébergement OVHcloud Web PRO (mutualisé)** : site **PHP 8.1+** et base **MySQL** (voir « Organisation du code » plus bas pour le détail). Plus de PC serveur au bureau.
+- Front-end : HTML/CSS/JS sans framework lourd, servi par l'hébergement, installable comme **PWA** (manifest + icône Le Roy).
+- Les collègues ouvrent `https://<adresse-du-site>` depuis leur navigateur, puis « Installer l'application ». La page Compte affiche l'adresse et un QR code.
+- Mises à jour quasi temps réel : l'écran interroge le serveur toutes les 5 secondes.
 - Le développement se fait avec Claude Code **dans la version web** (claude.ai/code), directement sur le dépôt GitHub. L'utilisateur n'a pas d'environnement de développement local.
-- Fournir à la racine des scripts Windows à double-cliquer pour le PC serveur :
-  - `installer.bat` : vérifie que Node.js est présent, lance `npm install`.
-  - `demarrer.bat` : lance le serveur et affiche l'adresse à donner aux collègues (`http://<IP>:3000`).
-  - `mettre-a-jour.bat` : récupère la dernière version depuis GitHub (`git pull`), réinstalle si besoin, redémarre, sans toucher à la base de données.
-- Un `README.md` en français, très simple, qui explique ces trois scripts pas à pas.
-- La base SQLite et les sauvegardes sont exclues de Git (`.gitignore`).
-- Accès réseau local uniquement, pas d'exposition sur Internet.
+- Installation et mises à jour : l'utilisateur envoie le contenu du dossier `www/` par FTP ; `README.md` explique tout pas à pas, en français très simple.
+- Les identifiants de la base (`www/config.php`) et les sauvegardes sont exclus de Git (`.gitignore`).
+- Le site est **sur Internet** (choix de l'utilisateur, octobre 2026) : https obligatoire, mots de passe hachés, limitation des essais.
 
 ## Comptes et droits
 - Connexion : choix du compte puis mot de passe. Mots de passe **hachés** (bcrypt), session par cookie.
@@ -63,21 +57,23 @@ Reproduire fidèlement ce rendu. Ne pas réinventer le design.
 - Tout le texte de l'interface en français, sans jargon technique.
 - Commits Git fréquents avec des messages clairs en français ; pousser sur GitHub après chaque étape qui fonctionne.
 - Expliquer simplement à l'utilisateur comment tester chaque nouveauté (il n'est pas développeur).
-- Ne jamais supprimer la base de données de production ; prévoir une sauvegarde automatique quotidienne du fichier SQLite dans un dossier `sauvegardes/`.
+- Ne jamais supprimer ni vider la base de données de production ; les migrations ne font qu'ajouter. Sauvegardes : celles d'OVHcloud + le téléchargement d'un fichier `.sql` par l'admin (page Compte).
 
 ## Plus tard (ne pas faire tout de suite)
 - Lien avec Business Central (clients, devis).
 - Notifications d'échéance.
 
-## Organisation du code (mise à jour d'octobre 2026)
-- Les « types » de tâche sont devenus des **catégories** modifiables (table `categories`, onglet « Catégories ») ; `tasks.type` contient l'identifiant de la catégorie.
-- Serveur : `server/index.js` (démarrage), `server/app.js` (application, sécurité, connexion par cookie ou clé d'accès), `server/routes/*.js` (une route par thème), `server/requetes.js` (règles d'accès), `server/db.js` (migrations numérotées : toujours **ajouter** une migration, ne jamais modifier une migration publiée).
-- Interface : `public/js/base.js` (outils), `regles.js` (état et règles), `ecrans.js` (écrans), `fiche.js` (fiche tâche), `actions.js` (évènements, temps réel).
-- Connecteurs IA : outils partagés `outils/mcp-commun.js`. Claude : `outils/claude-mcp.js` + `lier-a-claude.bat`. ChatGPT : `server/mcp-http.js` (port 3001, 127.0.0.1 uniquement, activé par l'admin) + `ouvrir-pour-chatgpt.bat` (tunnel Cloudflare vers ce seul port). C'est la seule exception, voulue par l'utilisateur, à la règle « réseau local uniquement ».
-- Tâches terminées : `tasks.done_at` / `done_by` (qui a terminé, quand) et `steps.done_at` / `done_by` (qui a coché). Une tâche terminée depuis plus de 7 jours n'est plus envoyée à l'écran (`q.nonArchivee`) ; l'admin la retrouve dans l'onglet « Historique » (`/api/historique`). Le journal d'activité d'une tâche est réservé à l'admin.
-- Ordre des groupes : `groupes.position`, réglé par l'admin (`/api/groups/ordre`).
+## Organisation du code (mise à jour d'octobre 2026 — version OVHcloud)
+- **Hébergement : OVHcloud Web PRO (mutualisé), PHP 8.1+ et MySQL.** Tout ce qui est publié est dans `www/` (envoyé par FTP dans le dossier `www` de l'hébergement). Plus de serveur Node.js ni de scripts `.bat` de démarrage : l'ancienne version (Node + SQLite sur un PC du bureau) a été remplacée.
+- L'application est désormais **sur Internet** (https obligatoire via `www/.htaccess`). Ancienne règle « réseau local uniquement » abandonnée à la demande de l'utilisateur ; en contrepartie : mots de passe de 6 caractères minimum, blocage après essais ratés (`login_failures`), cookies `Secure`/`HttpOnly`, compte admin créé par `installer.php` (jamais de mot de passe par défaut).
+- Les « types » de tâche sont des **catégories** modifiables (table `categories`) ; `tasks.type` contient l'identifiant de la catégorie.
+- API PHP : `www/api/index.php` (entrée, `/api/...`), `routes.php` (toutes les routes, table `table_routes()`), `lib.php` (MySQL via PDO, sessions, règles d'accès), `migrations.php` (migrations numérotées : toujours **ajouter**, jamais modifier une migration publiée ; elles s'exécutent toutes seules à la première visite). Configuration : `www/config.php` (jamais dans Git, modèle `config.exemple.php`).
+- Connecteur Claude / ChatGPT : `www/api/mcp.php` + `mcp-tools.php` (URL `https://site/mcp/lr_CLE`, activé par l'admin, réglage `connecteur_internet`). Les outils sont aussi en JavaScript dans `outils/mcp-commun.js` pour le connecteur Claude Desktop local (`outils/claude-mcp.js`, `lier-a-claude.bat`) : **garder les deux versions identiques**.
+- Interface : `www/js/base.js` (outils), `regles.js` (état et règles), `ecrans.js` (écrans), `fiche.js` (fiche tâche), `actions.js` (évènements, sondage de `/api/rev` toutes les 5 s à la place des Server-Sent Events, impossibles sur mutualisé). QR code dessiné dans le navigateur (`www/js/vendor/qrcode.js`).
+- Tâches terminées : `tasks.done_at` / `done_by` et `steps.done_at` / `done_by`. Une tâche terminée depuis plus de 7 jours n'est plus envoyée à l'écran ; l'admin la retrouve dans l'onglet « Historique » (`/api/historique`). Le journal d'activité d'une tâche est réservé à l'admin.
+- Ordre des groupes : `groupes.position`, réglé par l'admin (`/api/groups/ordre`), avec des flèches ← → sur chaque carte de l'accueil.
 - Tâches : `tasks.priority` (1 urgente, 2 haute, 3 normale par défaut, 4 basse) et `tasks.created_by` (affiché « Créée par »).
-- Accès : `server/routes/acces.js` — `/api/acces` (adresse réseau + QR code SVG, paquet `qrcode`) affiché dans Compte, et `/acces` (fiche à imprimer). Adresses classées par `adressesReseau()` dans `server/outils.js`.
+- Reprise des données de l'ancienne version : `exporter-vers-ovh.bat` / `outils/exporter-vers-ovh.js` (SQLite → fichier SQL pour phpMyAdmin).
 - Feuille de route : `docs/feuille-de-route.md`.
-- Tests : `npm test` (dossier `tests/`), relancés par GitHub Actions sous Windows et Linux. Les faire passer avant chaque envoi.
-- Documentation : `README.md` (installation), `docs/guide-utilisateur.md`, `docs/lier-a-claude.md`, `docs/audit.md`.
+- Tests : `npm test` (dossier `tests/`, Node 22 + PHP + MySQL ; variables `LR_DB_HOST`, `LR_DB_USER`, `LR_DB_PASS`), relancés par GitHub Actions. Les faire passer avant chaque envoi.
+- Documentation : `README.md` (installation OVH), `docs/guide-utilisateur.md`, `docs/lier-a-claude.md`, `docs/lier-a-chatgpt.md`, `docs/audit.md` (historique).

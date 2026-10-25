@@ -5,15 +5,33 @@ on:
   pull_request:
 jobs:
   tests:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        node: [22, 24]
+        php: ['8.1', '8.3']
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      LR_DB_HOST: 127.0.0.1
+      LR_DB_USER: root
+      LR_DB_PASS: root
     steps:
       - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, mbstring
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
-      - run: npm ci
+          node-version: 22
+      - name: Vérifier la syntaxe PHP
+        run: for f in www/*.php www/api/*.php outils/*.php; do php -l "$f"; done
       - run: npm test

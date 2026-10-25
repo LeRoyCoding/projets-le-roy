@@ -1,16 +1,31 @@
-// Outils pour les tests : démarre un serveur sur une base temporaire et simule des navigateurs.
+// Outils pour les tests : démarre le site PHP sur une base MySQL temporaire et simule des navigateurs.
+// Variables : LR_DB_HOST, LR_DB_PORT, LR_DB_USER, LR_DB_PASS (un utilisateur MySQL autorisé à créer des bases « lr_t_… »).
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const { open } = require('../server/db');
-const { createApp } = require('../server/app');
+const net = require('net');
+const { spawn, spawnSync } = require('child_process');
 
-async function demarrer() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'projets-test-'));
-  const db = open(path.join(dir, 'test.sqlite'));
-  const app = createApp({ db, backupDir: path.join(dir, 'sauvegardes') });
-  const server = await new Promise(r => { const s = app.listen(0, '127.0.0.1', () => r(s)); });
-  const base = `http://127.0.0.1:${server.address().port}`;
+const RACINE = path.join(__dirname, '..');
+const phpCli = (args, env) => spawnSync('php', [path.join(RACINE, 'outils', 'test-base.php'), ...args], { env: { ...process.env, ...env }, encoding: 'utf8' });
+const portLibre = () => new Promise(r => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => r(p)); }); });
+let compteur = 0;
+
+async function demarrer({ sansAdmin = false } = {}) {
+  const nom = `lr_t_${process.pid}_${++compteur}_${Date.now() % 100000}`;
+  const env = { LR_DB_NAME: nom };
+  let r = phpCli(['create', nom], {});
+  if (r.status !== 0) throw new Error('Impossible de créer la base de test : ' + (r.stderr || r.stdout));
+  r = sansAdmin ? phpCli(['sql', 'SELECT 1'], env) : phpCli(['admin'], env);
+  if (r.status !== 0) throw new Error('Impossible de préparer la base de test : ' + (r.stderr || r.stdout));
+
+  const port = await portLibre();
+  const proc = spawn('php', ['-S', `127.0.0.1:${port}`, '-t', path.join(RACINE, 'www'), path.join(RACINE, 'outils', 'serveur-test.php')],
+    { env: { ...process.env, ...env, PHP_CLI_SERVER_WORKERS: '4' }, stdio: 'ignore' });
+  const base = `http://127.0.0.1:${port}`;
+  for (let i = 0; i < 60; i++) { try { await fetch(base + '/api/comptes'); break; } catch { await new Promise(r => setTimeout(r, 100)); } }
+
+  // Ordre SQL direct (pour fabriquer des situations de test : dates anciennes…).
+  const sql = ordre => { const x = phpCli(['sql', ordre], env); if (x.status !== 0) throw new Error(x.stderr || x.stdout); };
 
   // Un « navigateur » garde son cookie de session.
   function client() {
@@ -47,23 +62,22 @@ async function demarrer() {
   }
 
   const stop = async () => {
-    app.locals.closeEvents();
-    await new Promise(r => server.close(r));
-    db.close();
-    fs.rmSync(dir, { recursive: true, force: true });
+    proc.kill();
+    await new Promise(r => setTimeout(r, 200));
+    phpCli(['drop', nom], {});
   };
-  return { base, db, client, stop };
+  return { base, sql, client, stop };
 }
 
 // Prépare une équipe : admin + Antoine + Claire, un groupe commun « Le Roy ».
 async function equipe(srv) {
   const admin = srv.client();
   await admin.login('Administrateur', 'admin');
-  const a = (await admin.post('/api/users', { name: 'Antoine', password: '0000', role: 'user' })).data.id;
-  const c = (await admin.post('/api/users', { name: 'Claire', password: '0000', role: 'user' })).data.id;
+  const a = (await admin.post('/api/users', { name: 'Antoine', password: 'secret0000', role: 'user' })).data.id;
+  const c = (await admin.post('/api/users', { name: 'Claire', password: 'secret0000', role: 'user' })).data.id;
   const g = (await admin.post('/api/groups', { name: 'Le Roy', icon: 'img:lr', color: '#C4122F', members: [a, c] })).data.id;
-  const antoine = srv.client(); await antoine.login('Antoine', '0000');
-  const claire = srv.client(); await claire.login('Claire', '0000');
+  const antoine = srv.client(); await antoine.login('Antoine', 'secret0000');
+  const claire = srv.client(); await claire.login('Claire', 'secret0000');
   const st = await antoine.state();
   const persoA = st.groups.find(x => x.name === 'Perso').id;
   return { admin, antoine, claire, ids: { a, c, g, persoA } };

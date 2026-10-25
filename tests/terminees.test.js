@@ -56,7 +56,7 @@ test('après 7 jours, une tâche terminée disparaît de l\'écran mais reste da
   const t = (await E.antoine.state()).tasks.find(x => x.id === id);
   await E.claire.patch('/api/steps/' + t.steps[0].id, { done: true });
   // On simule une validation il y a 8 jours
-  srv.db.prepare("UPDATE tasks SET done_at = datetime('now', '-8 days') WHERE id = ?").run(id);
+  srv.sql(`UPDATE tasks SET done_at = UTC_TIMESTAMP() - INTERVAL 8 DAY WHERE id = '${id}'`);
   assert.ok(!(await E.antoine.state()).tasks.some(x => x.id === id), 'masquée pour les utilisateurs');
   assert.ok(!(await E.admin.state()).tasks.some(x => x.id === id), 'masquée aussi sur l\'accueil de l\'admin');
   assert.equal((await E.antoine.get('/api/historique')).status, 403);
