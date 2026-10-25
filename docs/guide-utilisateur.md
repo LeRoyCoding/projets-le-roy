@@ -6,10 +6,12 @@ Ce guide s'adresse à toute l'équipe. Pas besoin d'être informaticien : tout s
 
 1. Ouvrez l'icône **Projets Le Roy** (ou l'adresse du site donnée par l'administrateur, par exemple `https://projets.le-roy.fr`).
    Sur un téléphone ou une tablette : **scannez le QR code** affiché dans la page **Compte** d'un collègue, ou sur la fiche imprimée.
-2. Cliquez sur votre prénom, tapez votre mot de passe, **Se connecter**.
-3. Vous restez connecté sur ce poste (pas besoin de recommencer chaque jour).
+2. Tapez votre **nom** et votre **mot de passe**, puis **Se connecter**.
+3. Vous restez connecté sur ce poste (jusqu'à 14 jours sans l'utiliser, 30 jours au plus) ; **Se déconnecter** (page Compte) à la fin sur un poste partagé.
 
-Mot de passe oublié ? Demandez à l'administrateur : il peut vous en donner un nouveau.
+**Première connexion** : l'administrateur vous a donné un mot de passe *provisoire*. L'application vous demande aussitôt d'en choisir un à vous : **12 caractères minimum** (une phrase facile à retenir convient très bien : « mes-chevaux-aiment-les-pommes »).
+
+**Mot de passe oublié ?** Demandez à l'administrateur : il vous donne un nouveau mot de passe provisoire. Après plusieurs essais ratés, la connexion est ralentie pendant quelques minutes : c'est normal, c'est une protection.
 
 ## L'accueil
 
@@ -74,6 +76,26 @@ Les tâches sous forme de barres, de la date de début à la date de fin. La par
 La ligne rouge = aujourd'hui. Les onglets en haut filtrent par groupe. Cliquez sur une barre pour ouvrir la fiche.
 La recherche et les filtres de l'accueil marchent aussi ici.
 
+## Qui peut faire quoi ?
+
+Dans chaque groupe, vous avez un **rôle** (l'administrateur voit tout et peut tout faire) :
+
+| Rôle | Voir | Créer des tâches, cocher, commenter | Modifier / supprimer | Gérer le groupe et la corbeille |
+|---|---|---|---|---|
+| **Responsable** | ✅ | ✅ | toutes les tâches du groupe | ✅ |
+| **Membre** | ✅ | ✅ | ses tâches, celles « de tout le groupe » (modifier), celles qu'il a créées (supprimer) | — |
+| **Lecteur** | ✅ | — | — | — |
+
+Une tâche qui vous est **attribuée** reste à vous : vous pouvez la cocher, la commenter et la modifier même si vous êtes lecteur. Si un bouton n'apparaît pas, c'est que vous n'en avez pas le droit : l'application ne vous le propose pas, et le serveur le refuserait de toute façon.
+
+## La corbeille
+
+**Supprimer** une tâche ou un groupe ne l'efface pas : elle va dans la **Corbeille** (onglet du même nom, pour les responsables et l'administrateur) et y reste **90 jours**. **Restaurer** la remet exactement comme avant. Seul l'administrateur peut supprimer définitivement.
+
+## La cloche 🔔 et les alertes
+
+La cloche en haut indique les tâches **en retard** et vos **notifications** (une tâche vous a été attribuée, un commentaire, une tâche terminée…). Dans **Compte**, vous pouvez recevoir un **résumé par e-mail chaque matin** (uniquement s'il y a quelque chose à signaler).
+
 ## Les groupes (+ Groupe)
 
 - **2 personnes ou plus** = groupe **commun** : chacun voit et fait avancer toutes ses tâches.
@@ -107,7 +129,10 @@ Onglet **Catégories** :
 - **Historique** (onglet réservé à l'administrateur) : toutes les tâches terminées, la date, qui a validé la tâche
   et chacune de ses étapes ; recherche et export Excel.
 
-- **Équipe** : ajouter une personne ; avec le crayon, la renommer, lui donner un **nouveau mot de passe**,
+- **Direction** : tableau de bord en lecture seule (retards par groupe et par personne, tâches urgentes, activité récente).
+- **Journal** : qui s'est connecté, qui a changé des droits, supprimé, restauré… Le journal ne peut être ni modifié ni effacé.
+- **Sécurité** (page Compte) : clés d'accès de chacun, dernière sauvegarde, comptes bloqués. Le chiffrement et l'envoi des sauvegardes vers le serveur interne sont décrits dans [sauvegardes.md](sauvegardes.md).
+- **Équipe** : ajouter une personne (mot de passe provisoire à lui transmettre de vive voix) ; avec le crayon, la renommer, lui donner un **nouveau mot de passe**,
   changer son rôle, ou **désactiver** son compte (il ne peut plus se connecter, ses tâches restent).
 - **Télécharger une sauvegarde complète** : une copie de toute la base, à ranger en lieu sûr.
 
@@ -115,4 +140,4 @@ Onglet **Catégories** :
 
 - Les changements des collègues apparaissent **tout seuls** (en quelques secondes), sans recharger la page.
 - Si un bandeau rouge « Connexion au serveur perdue » apparaît, votre connexion Internet est coupée : l'application se reconnecte toute seule dès qu'elle revient.
-- L'application fonctionne partout où il y a Internet. Elle est protégée par votre nom et votre mot de passe : choisissez un mot de passe d'au moins 6 caractères, difficile à deviner.
+- L'application fonctionne partout où il y a Internet. Elle est protégée par votre nom et votre mot de passe : choisissez un mot de passe d'au moins 12 caractères, difficile à deviner.

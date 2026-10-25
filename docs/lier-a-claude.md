@@ -5,48 +5,35 @@ Une fois relié, Claude peut lire et faire avancer vos tâches. Vous lui parlez 
 - « Qu'est-ce qui est en retard ? Résume-moi la semaine. »
 - « Crée un devis pour l'élevage Martin dans Le Roy, pour Claire, urgent, à rendre le 15/11, avec les étapes visite, chiffrage, envoi. »
 - « Coche l'étape chiffrage du devis Martin et ajoute un commentaire : client rappelé. »
-- « Quelles tâches de Julien finissent ce mois-ci ? »
 
-Claude agit **avec vos droits** : il voit exactement ce que vous voyez dans l'application, ni plus ni moins, et ne peut rien supprimer.
-Chaque action est notée dans l'historique des tâches, à votre nom.
+Claude agit **avec vos droits** (ceux de votre compte et de vos groupes), **ne peut rien supprimer**, et chaque action est notée dans l'historique de la tâche à votre nom.
 
-## Étape 0 — L'administrateur active le connecteur (une seule fois)
+## Comment la clé est protégée
 
-Page **Compte** → bas de la section « Lier à Claude ou ChatGPT » → **Activer le connecteur**. Tant qu'il est désactivé, personne ne peut s'en servir.
+- La clé est **personnelle et secrète**. Elle n'est affichée qu'une fois, **stockée chiffrée (empreinte) sur le serveur**, et **expire** (30 jours, 90 jours ou 1 an, au choix).
+- Elle ne voyage **jamais dans une adresse web** (les adresses sont enregistrées dans les journaux et l'historique) : seulement dans l'en-tête `Authorization: Bearer …`.
+- Vous pouvez la créer en **lecture seule** (Claude pourra consulter mais rien modifier).
+- Vous la supprimez quand vous voulez (corbeille) ; l'administrateur peut aussi révoquer n'importe quelle clé (Compte → Sécurité).
 
-## Étape 1 — Créer votre clé d'accès
+## Méthode recommandée : Claude Desktop (la clé reste sur votre ordinateur)
 
-1. Page **Compte** → **Lier à Claude ou ChatGPT** → **Créer une clé d'accès**.
-2. Un **lien personnel** s'affiche (`https://votre-site/mcp/lr_…`). **Copiez-le** : il ne sera plus jamais affiché.
-   Il fonctionne comme un mot de passe : ne le partagez avec personne.
+Il faut **Claude Desktop** et **Node.js** (<https://nodejs.org/fr/download>, version LTS) sur le PC.
 
-Vous pouvez supprimer une clé à tout moment (corbeille) : Claude perd alors l'accès immédiatement.
+1. Dans Projets Le Roy : **Compte → Lier à Claude ou ChatGPT → Créer une clé d'accès**. Copiez la clé (`lr_…`).
+2. Téléchargez le dépôt (GitHub → **Code → Download ZIP**) et décompressez-le.
+3. Double-cliquez sur **`lier-a-claude.bat`**, indiquez l'adresse du site (`https://votre-domaine`), collez la clé.
+4. Quittez complètement Claude (clic droit sur son icône → Quitter) puis rouvrez-le : *Paramètres → Développeur* doit afficher « projets-le-roy ».
 
-## Étape 2 — Relier Claude
+## Connecteur en ligne (outils qui savent envoyer un en-tête)
 
-### Méthode simple : connecteur personnalisé (Claude sur le web ou sur ordinateur)
-
-1. Dans Claude : **Paramètres → Connecteurs → Ajouter un connecteur personnalisé**.
-2. Nom : `Projets Le Roy`. Adresse : collez votre **lien personnel**. Ajoutez.
-3. Ouvrez une conversation et posez une question sur vos tâches.
-
-*(Selon votre formule Claude, les connecteurs personnalisés peuvent ne pas être disponibles : utilisez alors la méthode ci-dessous.)*
-
-### Autre méthode : Claude Desktop avec Node.js
-
-Il faut **Node.js** sur le PC (<https://nodejs.org/fr/download>, version LTS) et le dossier de l'application.
-
-1. Téléchargez le dossier : <https://github.com/LeRoyCoding/projets-le-roy> → **Code → Download ZIP**, décompressez-le (par exemple dans `C:\ProjetsLeRoy`).
-2. Créez une clé (étape 1) ; **gardez seulement la partie `lr_…`** du lien (la fin, après `/mcp/`).
-3. Double-cliquez sur **`lier-a-claude.bat`**, indiquez l'adresse du site (`https://votre-domaine`), collez la clé `lr_…`, Entrée.
-4. **Quittez complètement Claude** (clic droit sur son icône près de l'horloge → Quitter) puis rouvrez-le.
-   *Paramètres → Développeur* doit afficher « projets-le-roy ».
+L'administrateur doit d'abord l'**activer** (Compte → bas de la section « Lier à Claude ou ChatGPT »). L'adresse est `https://votre-domaine/mcp` ; l'authentification se fait par l'en-tête `Authorization: Bearer <votre clé>`.
+Si votre outil ne permet pas de choisir un en-tête, utilisez la méthode Claude Desktop ci-dessus : **une clé placée dans l'adresse est refusée** par sécurité.
 
 ## Dépannage
 
 | Problème | Solution |
 |---|---|
-| « Le connecteur est désactivé » | L'administrateur doit l'activer (étape 0). |
-| « Clé d'accès refusée » | La clé a été supprimée, ou le compte désactivé : créez-en une nouvelle. |
-| Claude ne voit aucun outil | Quittez et rouvrez Claude ; vérifiez le lien (il doit commencer par `https://` et contenir `/mcp/lr_`). |
-| 20 mauvaises clés de suite | Blocage de 10 minutes depuis cet appareil. |
+| « Le connecteur est désactivé » | L'administrateur doit l'activer. |
+| « Clé d'accès … expirée ou refusée » | Créez-en une nouvelle (Compte). |
+| « Cette clé d'accès est en lecture seule » | Créez une clé « Lecture et écriture ». |
+| 20 mauvaises clés de suite | Blocage progressif depuis cet appareil. |
