@@ -500,7 +500,6 @@ function checkPassword(mixed $p, string $label = 'Le mot de passe'): string {
     if (mb_strlen($p) > 200) fail(400, "$label est trop long.");
     return $p;
 }
-function hashPwd(string $p): string { return password_hash($p, PASSWORD_BCRYPT, ['cost' => 10]); }
 function activeAdmins(): int { return (int)val("SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = 1"); }
 
 function r_password(array $c): array {

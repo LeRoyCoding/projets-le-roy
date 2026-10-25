@@ -16,20 +16,15 @@ $stop = in_array(false, array_column($etapes, 0), true);
 
 $message = ''; $admin = null; $pret = false; $dejaInstalle = false;
 if (!$stop) {
-    if (!is_file(__DIR__ . '/config.php')) {
-        $etapes[] = [false, "Le fichier config.php est absent. Copiez config.exemple.php en config.php, remplissez-le (voir le guide), puis rechargez cette page."];
+    try {
+        db();   // lit config.php (message clair s'il manque) et se connecte à la base
+        $etapes[] = [true, 'Connexion à la base de données'];
+        migrer();
+        $etapes[] = [true, 'Tables de la base prêtes'];
+    } catch (Throwable $e) {
+        $msg = $e instanceof HttpError ? $e->getMessage() : 'Erreur : ' . $e->getMessage();
+        $etapes[] = [false, $msg];
         $stop = true;
-    } else {
-        try {
-            db();
-            $etapes[] = [true, 'Connexion à la base de données'];
-            migrer();
-            $etapes[] = [true, 'Tables de la base prêtes'];
-        } catch (Throwable $e) {
-            $msg = $e instanceof HttpError ? $e->getMessage() : 'Erreur : ' . $e->getMessage();
-            $etapes[] = [false, $msg];
-            $stop = true;
-        }
     }
 }
 

@@ -13,6 +13,7 @@ function now(): string { return gmdate('Y-m-d H:i:s'); }
 function newId(): string { return bin2hex(random_bytes(6)); }
 function newToken(): string { return bin2hex(random_bytes(32)); }
 function hashToken(string $t): string { return hash('sha256', $t); }
+function hashPwd(string $p): string { return password_hash($p, PASSWORD_BCRYPT, ['cost' => 10]); }
 function todayIso(): string { return date('Y-m-d'); }
 
 // Texte nettoyé avec longueur maximale (et obligatoire si demandé).

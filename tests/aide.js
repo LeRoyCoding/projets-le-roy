@@ -10,12 +10,12 @@ const phpCli = (args, env) => spawnSync('php', [path.join(RACINE, 'outils', 'tes
 const portLibre = () => new Promise(r => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => r(p)); }); });
 let compteur = 0;
 
-async function demarrer() {
+async function demarrer({ sansAdmin = false } = {}) {
   const nom = `lr_t_${process.pid}_${++compteur}_${Date.now() % 100000}`;
   const env = { LR_DB_NAME: nom };
   let r = phpCli(['create', nom], {});
   if (r.status !== 0) throw new Error('Impossible de créer la base de test : ' + (r.stderr || r.stdout));
-  r = phpCli(['admin'], env);
+  r = sansAdmin ? phpCli(['sql', 'SELECT 1'], env) : phpCli(['admin'], env);
   if (r.status !== 0) throw new Error('Impossible de préparer la base de test : ' + (r.stderr || r.stdout));
 
   const port = await portLibre();
