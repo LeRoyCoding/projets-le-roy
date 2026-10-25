@@ -69,7 +69,7 @@ test('membre : crée, coche, commente ; modifie ses tâches et celles de « tout
   assert.equal((await C.Mem.get('/api/tasks/' + deResp + '/details')).data.activity.length, 0, 'historique réservé aux responsables');
 });
 
-test('une tâche attribuée à quelqu'un hors du groupe est refusée ; si elle sort du groupe plus tard, elle garde l\'accès à sa tâche', async () => {
+test('tâche attribuée hors du groupe : refusée ; la personne désignée agit sur sa tâche même en lecture seule', async () => {
   assert.equal((await C.Resp.post('/api/tasks', tache(G, { title: 'Pour Ext', ownerId: U.Ext }))).status, 400, 'Ext n\'est pas du groupe');
   const id = await creer('Resp', { title: 'Mission Lec', ownerId: U.Lec, steps: [{ label: 'E1' }] });
   // Lec est lecteur : il peut tout de même cocher « sa » tâche, car elle lui est attribuée

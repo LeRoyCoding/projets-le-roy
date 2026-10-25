@@ -67,7 +67,8 @@ function config_optional(): array {
         return $cfg = ['db_host' => getenv('LR_DB_HOST') ?: '127.0.0.1', 'db_port' => getenv('LR_DB_PORT') ?: null,
             'db_name' => getenv('LR_DB_NAME'), 'db_user' => getenv('LR_DB_USER') ?: 'root', 'db_pass' => getenv('LR_DB_PASS') ?: '',
             'maintenance_key' => getenv('LR_TEST_MAINTENANCE_KEY') ?: null, 'data_dir' => getenv('LR_DATA_DIR') ?: null,
-            'backup_public_key' => getenv('LR_TEST_BACKUP_PUBKEY') ?: null, 'env' => 'test'];
+            'backup_public_key' => getenv('LR_TEST_BACKUP_PUBKEY') ?: null, 'env' => 'test',
+            'restore_test' => getenv('LR_TEST_RESTORE_DB') ? ['db_name' => getenv('LR_TEST_RESTORE_DB'), 'db_user' => getenv('LR_DB_USER') ?: 'root', 'db_pass' => getenv('LR_DB_PASS') ?: ''] : null];
     }
     $f = config_file();
     $cfg = $f ? (array)(require $f) : [];
