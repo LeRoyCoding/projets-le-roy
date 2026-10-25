@@ -166,8 +166,11 @@ return [
     ['breaking' => false, 'sql' => [
         fn(PDO $p) => schema_add_column($p, 'group_members', 'role', "VARCHAR(12) NOT NULL DEFAULT 'membre'"),
         fn(PDO $p) => schema_add_column($p, 'groupes', 'created_by', 'VARCHAR(32) NULL'),
-        "UPDATE group_members gm SET gm.role = 'responsable'
-            WHERE (SELECT COUNT(*) FROM (SELECT group_id, user_id FROM group_members) x WHERE x.group_id = gm.group_id) = 1",
+        // Groupes à un seul membre (les « Perso ») : leur propriétaire en est responsable. (Écrit en deux temps : MySQL refuse de relire la table qu'il modifie.)
+        function (PDO $p) {
+            $ids = $p->query('SELECT group_id FROM group_members GROUP BY group_id HAVING COUNT(*) = 1')->fetchAll(PDO::FETCH_COLUMN);
+            foreach (array_chunk($ids, 200) as $lot) { $st = $p->prepare("UPDATE group_members SET role = 'responsable' WHERE group_id IN (" . implode(',', array_fill(0, count($lot), '?')) . ')'); $st->execute($lot); }
+        },
     ]],
 
     // 4 — corbeille : tâches et groupes supprimés restent récupérables ; historique plus détaillé

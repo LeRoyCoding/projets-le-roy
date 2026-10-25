@@ -1,0 +1,53 @@
+name: Retour à la version précédente (OVH)
+# Lancement MANUEL : remet en service une version précédente du CODE (la base n'est pas modifiée).
+on:
+  workflow_dispatch:
+    inputs:
+      cible:
+        description: "Où ?"
+        type: choice
+        options: [test, production]
+        default: production
+      version:
+        description: "Identifiant de version (laisser vide = la version juste avant celle en service)"
+        default: ''
+      forcer:
+        description: "Forcer même si la base a été modifiée par une mise à jour que l'ancien code ne comprend pas (déconseillé)"
+        type: boolean
+        default: false
+
+jobs:
+  retour:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.cible }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Préparer l'accès SSH
+        env:
+          SSH_KEY: ${{ secrets.OVH_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.OVH_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ovh && chmod 600 ~/.ssh/id_ovh
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts_ovh
+          cat > "$RUNNER_TEMP/cible.env" <<ENV
+          MODE=ssh
+          SSH_HOST="${{ secrets.OVH_SSH_HOST }}"
+          SSH_USER="${{ secrets.OVH_SSH_USER }}"
+          SSH_PORT="${{ secrets.OVH_SSH_PORT }}"
+          SSH_KEY="$HOME/.ssh/id_ovh"
+          SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts_ovh"
+          REMOTE_BASE="${{ secrets.OVH_REMOTE_BASE || 'projets' }}"
+          PHP_BIN="${{ secrets.OVH_PHP_BIN || 'php' }}"
+          ENV
+      - name: Retour arrière
+        env:
+          DEPLOY_ENV_FILE: ${{ runner.temp }}/cible.env
+        run: |
+          ARGS="--cible=${{ inputs.cible }}"
+          if [ -n "${{ inputs.version }}" ]; then ARGS="$ARGS --vers=${{ inputs.version }}"; fi
+          if [ "${{ inputs.forcer }}" = "true" ]; then ARGS="$ARGS --forcer"; fi
+          bash deploiement/retour-arriere.sh $ARGS
+      - name: Nettoyer
+        if: always()
+        run: rm -f ~/.ssh/id_ovh "$RUNNER_TEMP/cible.env"

@@ -1,6 +1,7 @@
 // Sécurité : mots de passe, essais répétés, sessions, origine des requêtes, clés d'accès, journal.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const MY = require('./mysql').args;
 const fs = require('fs');
 const path = require('path');
 const { demarrer, equipe, tache, PW, TEMP_PW, ADMIN_PW } = require('./aide');
@@ -62,7 +63,7 @@ test('cookie de session : HttpOnly, SameSite=Strict, valeur aléatoire non stock
   // La base ne contient que l'empreinte : le jeton lui-même n'y figure pas
   const out = srv.cli('_cli.php').status; // (l'outil charge la config de test)
   assert.equal(out, 0);
-  const q = require('child_process').spawnSync('mysql', ['-uroot', srv.nom, '-N', '-e', `SELECT COUNT(*) FROM sessions WHERE token = '${token}'`], { encoding: 'utf8' });
+  const q = require('child_process').spawnSync('mysql', [...MY, srv.nom, '-N', '-e', `SELECT COUNT(*) FROM sessions WHERE token = '${token}'`], { encoding: 'utf8' });
   assert.equal(q.stdout.trim(), '0');
 });
 

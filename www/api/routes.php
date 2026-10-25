@@ -98,6 +98,12 @@ function steps_of(array $taskIds): array {
     return $out;
 }
 
+// Version déployée (fichier RELEASE.json écrit par le déploiement) : sert au support et au retour arrière.
+function release_info(): ?array {
+    $f = dirname(__DIR__, 2) . '/RELEASE.json';
+    return is_file($f) ? (json_decode((string)file_get_contents($f), true) ?: null) : null;
+}
+
 // Rôles de l'utilisateur dans chaque groupe : [groupe => rôle].
 function my_roles(array $me): array {
     return array_column(rows('SELECT group_id, role FROM group_members WHERE user_id = ?', [$me['id']]), 'role', 'group_id');
@@ -142,7 +148,7 @@ function r_state(array $c): array {
     if ($admin) foreach (rows('SELECT owner_id, COUNT(*) AS n FROM tasks WHERE owner_id IS NOT NULL AND deleted_at IS NULL GROUP BY owner_id') as $r) $taskCounts[$r['owner_id']] = (int)$r['n'];
 
     return [
-        'me' => $me['id'], 'myRole' => $me['role'], 'version' => APP_VERSION, 'users' => $users, 'groups' => $groups, 'categories' => $categories,
+        'me' => $me['id'], 'myRole' => $me['role'], 'version' => APP_VERSION, 'env' => (string)(config_optional()['env'] ?? 'production'), 'release' => release_info(), 'users' => $users, 'groups' => $groups, 'categories' => $categories,
         'taskCounts' => (object)$taskCounts,
         'archiveJours' => ARCHIVE_JOURS,
         'connecteur' => ['actif' => getSetting('connecteur_internet') === '1'],

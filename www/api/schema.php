@@ -46,6 +46,8 @@ function schema_state(): array {
 
 // Appelé au début de chaque requête de l'application : refuse de fonctionner si la base n'est pas prête.
 function schema_gate(): void {
+    // Mode maintenance volontaire (déploiement en cours) : un fichier « maintenance.flag » dans le dossier des données.
+    if (is_file(data_dir('etat') . '/maintenance.flag')) fail(503, 'Maintenance en cours : l\'application revient dans quelques minutes.', 'maintenance');
     $s = schema_state();
     if ($s['state'] === 'ok' || $s['state'] === 'recent') return;
     if ($s['state'] === 'absent') fail(503, "L'application n'est pas encore installée. L'administrateur doit ouvrir installer.php.", 'schema');

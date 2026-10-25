@@ -1,0 +1,81 @@
+name: Déployer sur OVH
+# Lancement MANUEL uniquement : GitHub → onglet « Actions » → « Déployer sur OVH » → « Run workflow ».
+# Rien n'est jamais publié automatiquement. La cible « production » demande une approbation (réglage « Environments » du dépôt).
+on:
+  workflow_dispatch:
+    inputs:
+      cible:
+        description: "Où déployer ?"
+        type: choice
+        options: [test, production]
+        default: test
+      reference:
+        description: "Branche, étiquette (tag) ou commit à déployer"
+        default: main
+      migrer:
+        description: "Appliquer aussi la mise à jour de la base (après sauvegarde vérifiée)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploiement-${{ inputs.cible }}
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env: { MYSQL_ROOT_PASSWORD: root }
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot" --health-interval=5s --health-timeout=5s --health-retries=30
+    env: { LR_DB_HOST: 127.0.0.1, LR_DB_USER: root, LR_DB_PASS: root }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.reference }}" }
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: '8.2', extensions: 'pdo_mysql, mbstring, openssl, zlib, ctype' }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm test
+
+  deployer:
+    needs: tests
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.cible }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.reference }}", fetch-depth: 0 }
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: '8.2' }
+      - name: Préparer l'accès SSH à l'hébergement
+        env:
+          SSH_KEY: ${{ secrets.OVH_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.OVH_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ovh && chmod 600 ~/.ssh/id_ovh
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts_ovh
+          cat > "$RUNNER_TEMP/cible.env" <<ENV
+          MODE=ssh
+          SSH_HOST="${{ secrets.OVH_SSH_HOST }}"
+          SSH_USER="${{ secrets.OVH_SSH_USER }}"
+          SSH_PORT="${{ secrets.OVH_SSH_PORT }}"
+          SSH_KEY="$HOME/.ssh/id_ovh"
+          SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts_ovh"
+          REMOTE_BASE="${{ secrets.OVH_REMOTE_BASE || 'projets' }}"
+          SITE_URL="${{ secrets.OVH_SITE_URL }}"
+          PHP_BIN="${{ secrets.OVH_PHP_BIN || 'php' }}"
+          ENV
+      - name: Déployer
+        env:
+          DEPLOY_ENV_FILE: ${{ runner.temp }}/cible.env
+        run: |
+          ARGS="--cible=${{ inputs.cible }}"
+          if [ "${{ inputs.migrer }}" = "true" ]; then ARGS="$ARGS --migrer"; fi
+          bash deploiement/deployer.sh $ARGS
+      - name: Nettoyer
+        if: always()
+        run: rm -f ~/.ssh/id_ovh "$RUNNER_TEMP/cible.env"

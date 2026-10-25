@@ -1,6 +1,7 @@
 // Sauvegardes : export en flux, vérification, chiffrement, restauration sur base isolée, migration protégée par une sauvegarde.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const MY = require('./mysql').args;
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -10,7 +11,7 @@ const { demarrer, equipe, tache, PW, ADMIN_PW } = require('./aide');
 
 let srv, E, tmp, pub, priv, restoreDb;
 const sh = (cmd, args, opt = {}) => spawnSync(cmd, args, { encoding: 'utf8', ...opt });
-const sql = (db, q) => sh('mysql', ['-uroot', '-N', '--default-character-set=utf8mb4', db, '-e', q]).stdout.trim();
+const sql = (db, q) => sh('mysql', [...MY, '-N', '--default-character-set=utf8mb4', db, '-e', q]).stdout.trim();
 const fichiers = (dir, re) => fs.readdirSync(dir).filter(f => re.test(f)).sort();
 
 before(async () => {

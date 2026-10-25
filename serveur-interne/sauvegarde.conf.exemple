@@ -1,0 +1,26 @@
+# Configuration de la récupération des sauvegardes sur le serveur interne.
+# Copier en /etc/projets-le-roy/sauvegarde.conf (droits 600) et adapter. Voir docs/sauvegardes.md.
+
+# --- D'où viennent les sauvegardes (hébergement OVH, accès SFTP/SSH en lecture) ---
+REMOTE_HOST="ssh.cluster0XX.hosting.ovh.net"      # serveur SSH/SFTP indiqué dans le Manager OVH (onglet FTP - SSH)
+REMOTE_PORT="22"
+REMOTE_USER="votre-identifiant-ftp"
+REMOTE_DIR="data/sauvegardes"                      # dossier des sauvegardes, relatif au dossier personnel
+SSH_KEY="/etc/projets-le-roy/id_ovh"               # clé SSH DÉDIÉE (ssh-keygen -t ed25519), publique ajoutée dans le Manager
+SSH_KNOWN_HOSTS="/etc/projets-le-roy/known_hosts"  # empreinte du serveur OVH enregistrée une fois (ssh-keyscan)
+
+# --- Où les ranger sur le serveur interne ---
+DEST_DIR="/srv/sauvegardes/projets-le-roy"
+
+# --- Surveillance ---
+MAX_AGE_HOURS="30"                                 # alerte si aucune sauvegarde plus récente que cela
+ALERT_EMAIL="informatique@le-roy.fr"               # facultatif (commande « mail » ou « sendmail » nécessaire)
+ALERT_WEBHOOK=""                                   # facultatif : adresse d'un webhook (Teams, Slack, Mattermost…)
+
+# --- Test de restauration automatique (chaque dimanche), dans une base de TEST locale ---
+RESTORE_TEST="1"
+PRIVATE_KEY="/etc/projets-le-roy/sauvegarde-privee.pem"   # clé privée RSA : à garder AUSSI hors de ce serveur (coffre)
+TEST_DB_HOST="127.0.0.1"
+TEST_DB_USER="restauration_test"                   # utilisateur MySQL/MariaDB local autorisé à créer des bases « lr_restore_* »
+TEST_DB_PASS="a-remplacer"
+TEST_DB_PREFIX="lr_restore_"

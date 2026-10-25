@@ -14,9 +14,10 @@ function render() {
     ...(me && canManageTrash() ? [['corbeille', 'Corbeille' + (S.corbeille ? ' (' + S.corbeille + ')' : '')]] : []),
     ...(me && me.role === 'admin' ? [['historique', 'Historique'], ['journal', 'Journal']] : []), ['account', 'Compte']];
   const editing = (v === 'newTask' && (ui.editId || ui.dupFrom)) || (v === 'newGroup' && ui.editGroup);
-  $('#hdr').innerHTML = `<div class="brandbar"><div class="wrap"><div class="logo"><span class="logo-pill"><img src="${IMG.full}" alt="Le Roy – Lead Le Roy Concept"></span><span class="app">Projets</span></div>
+  $('#hdr').innerHTML = `${S && S.env && S.env !== 'production' ? '<div class="envbar">ENVIRONNEMENT DE TEST — les données ici ne sont pas les vraies</div>' : ''}<div class="brandbar"><div class="wrap"><div class="logo"><span class="logo-pill"><img src="${IMG.full}" alt="Le Roy – Lead Le Roy Concept"></span><span class="app">Projets</span></div>
   ${me ? `<button class="me" data-act="nav" data-v="account"><span class="av">${ini(me)}</span><span class="nm">${esc(me.name)}</span>${me.role === 'admin' ? '<span class="role-tag">Admin</span>' : ''}</button>` : ''}</div></div>
   ${me ? `<div class="tabsbar"><div class="wrap"><nav aria-label="Navigation principale">${tabs.map(([id, l, p]) => `<button data-act="nav" data-v="${id}" ${v === id && !editing ? 'aria-current="page"' : ''}>${p ? '<span class="plus">+</span>' : ''}${l}</button>`).join('')}</nav></div></div>` : ''}`;
+  document.body.classList.toggle('env-test', !!(S && S.env && S.env !== 'production'));
   const tlScroll = $('#tl-wrap')?.scrollLeft;
   $('#main').innerHTML = VIEWS[v]();
   if (v === 'timeline') placeTimeline(tlScroll);
