@@ -129,4 +129,54 @@ return [
             ('event', 'Salon / évènement', '🎪', 6, UTC_TIMESTAMP()),
             ('perso', 'Perso', '🏡', 7, UTC_TIMESTAMP())",
     ],
+
+    // 2 — sécurité : comptes (mot de passe à changer, courriel, origine d'authentification), sessions, clés d'accès, journal des opérations sensibles
+    ['breaking' => false, 'sql' => [
+        fn(PDO $p) => schema_add_column($p, 'users', 'email', 'VARCHAR(190) NULL'),
+        fn(PDO $p) => schema_add_column($p, 'users', 'must_change', 'TINYINT(1) NOT NULL DEFAULT 0'),
+        fn(PDO $p) => schema_add_column($p, 'users', 'auth_source', "VARCHAR(20) NOT NULL DEFAULT 'local'"),
+        fn(PDO $p) => schema_add_column($p, 'users', 'external_id', 'VARCHAR(100) NULL'),
+        fn(PDO $p) => schema_add_column($p, 'users', 'password_changed_at', 'DATETIME NULL'),
+        fn(PDO $p) => schema_add_column($p, 'users', 'last_login_at', 'DATETIME NULL'),
+        fn(PDO $p) => schema_add_column($p, 'users', 'notify_daily', 'TINYINT(1) NOT NULL DEFAULT 0'),
+        fn(PDO $p) => schema_add_index($p, 'users', 'users_external', 'UNIQUE KEY users_external (auth_source, external_id)'),
+        fn(PDO $p) => schema_add_column($p, 'sessions', 'expires_at', 'DATETIME NULL'),
+        fn(PDO $p) => schema_add_column($p, 'sessions', 'ip', 'VARCHAR(45) NULL'),
+        fn(PDO $p) => schema_add_column($p, 'sessions', 'user_agent', 'VARCHAR(190) NULL'),
+        "UPDATE sessions SET expires_at = DATE_ADD(created_at, INTERVAL 30 DAY) WHERE expires_at IS NULL",
+        fn(PDO $p) => schema_add_column($p, 'api_tokens', 'scope', "VARCHAR(10) NOT NULL DEFAULT 'ecriture'"),
+        fn(PDO $p) => schema_add_column($p, 'api_tokens', 'expires_at', 'DATETIME NULL'),
+        fn(PDO $p) => schema_add_column($p, 'api_tokens', 'prefix', 'VARCHAR(12) NULL'),
+        fn(PDO $p) => schema_add_column($p, 'api_tokens', 'last_ip', 'VARCHAR(45) NULL'),
+        "CREATE TABLE IF NOT EXISTS audit_log (
+            id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            at DATETIME NOT NULL,
+            user_id VARCHAR(32) NULL,
+            user_name VARCHAR(60) NULL,
+            ip VARCHAR(45) NULL,
+            action VARCHAR(40) NOT NULL,
+            target_type VARCHAR(20) NULL,
+            target_id VARCHAR(40) NULL,
+            detail VARCHAR(500) NOT NULL DEFAULT '',
+            KEY audit_at (at), KEY audit_action (action), KEY audit_user (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+    ]],
+
+    // 3 — droits par groupe : responsable / membre / lecteur (les groupes privés : le propriétaire est responsable)
+    ['breaking' => false, 'sql' => [
+        fn(PDO $p) => schema_add_column($p, 'group_members', 'role', "VARCHAR(12) NOT NULL DEFAULT 'membre'"),
+        fn(PDO $p) => schema_add_column($p, 'groupes', 'created_by', 'VARCHAR(32) NULL'),
+        "UPDATE group_members gm SET gm.role = 'responsable'
+            WHERE (SELECT COUNT(*) FROM (SELECT group_id, user_id FROM group_members) x WHERE x.group_id = gm.group_id) = 1",
+    ]],
+
+    // 4 — corbeille : tâches et groupes supprimés restent récupérables ; historique plus détaillé
+    ['breaking' => false, 'sql' => [
+        fn(PDO $p) => schema_add_column($p, 'tasks', 'deleted_at', 'DATETIME NULL'),
+        fn(PDO $p) => schema_add_column($p, 'tasks', 'deleted_by', 'VARCHAR(32) NULL'),
+        fn(PDO $p) => schema_add_index($p, 'tasks', 'tasks_deleted', 'KEY tasks_deleted (deleted_at)'),
+        fn(PDO $p) => schema_add_column($p, 'groupes', 'deleted_at', 'DATETIME NULL'),
+        fn(PDO $p) => schema_add_column($p, 'groupes', 'deleted_by', 'VARCHAR(32) NULL'),
+        "ALTER TABLE activity MODIFY detail TEXT NOT NULL",
+    ]],
 ];

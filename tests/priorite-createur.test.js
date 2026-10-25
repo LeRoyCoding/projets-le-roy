@@ -19,7 +19,7 @@ test('priorité : normale par défaut, modifiable, valeur illisible ignorée', a
   const id2 = (await E.antoine.post('/api/tasks', tache(E.ids.g, { priority: 4 }))).data.id;
   assert.equal((await E.antoine.state()).tasks.find(x => x.id === id2).priority, 4);
   const a = (await E.admin.get('/api/tasks/' + id + '/details')).data.activity;
-  assert.match(a[0].detail, /priorité → urgente/);
+  assert.match(a[0].detail, /priorité : normale → urgente/);
 });
 
 test('créateur de la tâche visible', async () => {
