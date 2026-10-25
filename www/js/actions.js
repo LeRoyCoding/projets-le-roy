@@ -1,13 +1,18 @@
 // Affichage général, clics, formulaires, temps réel et démarrage.
 'use strict';
 
-const VIEWS = { login: vLogin, home: vHome, timeline: vTimeline, newTask: vNewTask, newGroup: vNewGroup, categories: vCategories, historique: vHistorique, account: vAccount };
+const VIEWS = { mustChange: vMustChange, corbeille: vCorbeille, journal: vJournal, login: vLogin, home: vHome, timeline: vTimeline, newTask: vNewTask, newGroup: vNewGroup, categories: vCategories, historique: vHistorique, account: vAccount };
 
 function render() {
+  if (S && S.mustChange) {   // mot de passe provisoire : rien d'autre n'est accessible
+    $('#hdr').innerHTML = `<div class="brandbar"><div class="wrap"><div class="logo"><span class="logo-pill"><img src="${IMG.full}" alt="Le Roy – Lead Le Roy Concept"></span><span class="app">Projets</span></div></div></div>`;
+    $('#main').innerHTML = vMustChange(); $('#modal').hidden = true; return;
+  }
   const me = cur(); if (!me) ui.view = 'login'; else if (ui.view === 'login') ui.view = 'home';
   const v = ui.view;
   const tabs = [['home', 'Accueil'], ['timeline', 'Timeline'], ['newTask', 'Tâche', 1], ['newGroup', 'Groupe', 1], ['categories', 'Catégories'],
-    ...(me && me.role === 'admin' ? [['historique', 'Historique']] : []), ['account', 'Compte']];
+    ...(me && canManageTrash() ? [['corbeille', 'Corbeille' + (S.corbeille ? ' (' + S.corbeille + ')' : '')]] : []),
+    ...(me && me.role === 'admin' ? [['historique', 'Historique'], ['journal', 'Journal']] : []), ['account', 'Compte']];
   const editing = (v === 'newTask' && (ui.editId || ui.dupFrom)) || (v === 'newGroup' && ui.editGroup);
   $('#hdr').innerHTML = `<div class="brandbar"><div class="wrap"><div class="logo"><span class="logo-pill"><img src="${IMG.full}" alt="Le Roy – Lead Le Roy Concept"></span><span class="app">Projets</span></div>
   ${me ? `<button class="me" data-act="nav" data-v="account"><span class="av">${ini(me)}</span><span class="nm">${esc(me.name)}</span>${me.role === 'admin' ? '<span class="role-tag">Admin</span>' : ''}</button>` : ''}</div></div>
@@ -36,7 +41,9 @@ function go(v, keep) {
   ui.view = v; ui.pwdErr = ''; ui.editUser = null; ui.editCat = null; ui.catDel = null;
   if (!keep) { ui.editId = null; ui.dupFrom = null; ui.editGroup = null; ui.presetGroup = null; }
   if (v !== 'account') ui.newKey = null;
-  if (v === 'account') loadKeys();
+  if (v === 'account') { loadKeys(); if (isAdmin()) loadSecurite(); }
+  if (v === 'corbeille') loadTrash();
+  if (v === 'journal') { ui.audit = null; loadAudit(); }
   if (v === 'historique') loadHistorique();
   render(); window.scrollTo(0, 0);
 }
@@ -64,6 +71,32 @@ function exportHistoriqueCsv() {
     t.doneBy ? userById(t.doneBy).name : '—', t.steps.length, t.archived ? 'Archivée' : 'Encore affichée']);
   const csv = '\ufeff' + [['Terminée le', 'Tâche', 'Groupe', 'Catégorie', 'Pour qui', 'Validée par', 'Étapes', 'État'], ...rows].map(r => r.map(cell).join(';')).join('\r\n');
   downloadFile(`historique-taches-${iso(today())}.csv`, csv, 'text/csv;charset=utf-8');
+}
+async function loadSecurite() {
+  try { const [s, b, k] = await Promise.all([api('GET', '/api/securite'), api('GET', '/api/sauvegardes'), api('GET', '/api/securite/cles')]); ui.sec = s; ui.backups = b; ui.adminKeys = k.tokens; }
+  catch { /* sans importance */ }
+  if (ui.view === 'account') render();
+}
+async function loadTrash() {
+  try { ui.trash = await api('GET', '/api/corbeille'); } catch (e) { ui.trash = { tasks: [], groups: [], jours: 90 }; toast(e.message); }
+  if (ui.view === 'corbeille') render();
+}
+async function loadAudit(more) {
+  try {
+    const q = new URLSearchParams({ limite: '100' });
+    if (ui.auditAction) q.set('action', ui.auditAction);
+    if (ui.auditQ) q.set('q', ui.auditQ);
+    if (more && ui.audit && ui.audit.events.length) q.set('avant', ui.audit.events[ui.audit.events.length - 1].id);
+    const r = await api('GET', '/api/audit?' + q);
+    ui.audit = more && ui.audit ? { events: [...ui.audit.events, ...r.events] } : r;
+  } catch (e) { ui.audit = { events: [] }; toast(e.message); }
+  if (ui.view === 'journal') render();
+}
+// Mot de passe provisoire aléatoire, facile à dicter : 4 groupes de 4 caractères sans ambiguïté (pas de 0/O, 1/l/I).
+function genPwd() {
+  const alpha = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = new Uint32Array(16);
+  crypto.getRandomValues(r);
+  return [...r].map(n => alpha[n % alpha.length]).join('').replace(/(.{4})(?=.)/g, '$1-');
 }
 async function loadKeys() {
   try { ui.keys = (await api('GET', '/api/tokens')).tokens; if (ui.view === 'account') render(); } catch { /* sans importance */ }
@@ -178,7 +211,7 @@ document.addEventListener('click', async e => {
       if (!t) break;
       if (!ui.confirmDel) { ui.confirmDel = true; renderModal(); break; }
       ui.confirmDel = false;
-      await act(async () => { await api('DELETE', '/api/tasks/' + t.id); ui.openTask = null; ui.details = null; }, 'Tâche supprimée');
+      await act(async () => { await api('DELETE', '/api/tasks/' + t.id); ui.openTask = null; ui.details = null; }, 'Tâche mise à la corbeille (récupérable pendant 90 jours)');
       break;
     case 'filter-user': if (id === 'all') ui.filter = []; else { ui.filter = ui.filter.includes(id) ? ui.filter.filter(x => x !== id) : [...ui.filter, id]; } render(); break;
     case 'stat-filter': ui.statusFilter = ui.statusFilter === id ? null : id; renderResults(); break;
@@ -211,7 +244,7 @@ document.addEventListener('click', async e => {
     // Groupes
     case 'edit-group': ui.editGroup = id; go('newGroup', true); break;
     case 'del-group':
-      await act(async () => { await api('DELETE', '/api/groups/' + id); if (ui.tlGroup === id) ui.tlGroup = 'all'; if (ui.editGroup === id) ui.editGroup = null; }, 'Groupe supprimé');
+      await act(async () => { await api('DELETE', '/api/groups/' + id); if (ui.tlGroup === id) ui.tlGroup = 'all'; if (ui.editGroup === id) ui.editGroup = null; }, 'Groupe mis à la corbeille');
       break;
     // Catégories
     case 'cat-edit': ui.editCat = id; ui.catDel = null; render(); $('.cat-form input[name=label]')?.focus(); break;
@@ -254,9 +287,18 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'key-del': if (await act(() => api('DELETE', '/api/tokens/' + id), 'Clé supprimée')) loadKeys(); break;
+    case 'gen-pwd': { const el = document.getElementById(b.dataset.target); if (el) { el.value = genPwd(); el.type = 'text'; el.focus(); el.select(); } break; }
+    case 'user-logout': await act(() => api('POST', '/api/securite/deconnecter/' + id, {}), 'Appareils déconnectés'); break;
+    case 'trash-restore': await act(() => api('POST', '/api/corbeille/' + b.dataset.kind + '/' + id + '/restaurer', {}), 'Restauré'); loadTrash(); break;
+    case 'trash-purge':
+      if (ui.purgeArm !== b.dataset.kind + id) { ui.purgeArm = b.dataset.kind + id; render(); break; }
+      ui.purgeArm = null;
+      await act(() => api('DELETE', '/api/corbeille/' + b.dataset.kind + '/' + id), 'Supprimé définitivement'); loadTrash(); break;
+    case 'admin-key-revoke': if (await act(() => api('DELETE', '/api/securite/cles/' + id), 'Clé révoquée')) loadSecurite(); break;
+    case 'audit-more': loadAudit(true); break;
     case 'logout':
       try { await api('POST', '/api/logout', {}); } catch { /* on déconnecte quand même l'écran */ }
-      S = null; stopEvents(); ui.loginUser = null; ui.openTask = null; ui.details = null; ui.filter = []; ui.tlGroup = 'all'; ui.search = ''; ui.cat = ''; ui.newKey = null; ui.keys = [];
+      S = null; stopEvents(); ui.loginUser = null; ui.openTask = null; ui.details = null; ui.filter = []; ui.tlGroup = 'all'; ui.search = ''; ui.cat = ''; ui.newKey = null; ui.keys = []; ui.sec = null; ui.backups = null; ui.adminKeys = null; ui.trash = null; ui.audit = null; ui.pwdErr = '';
       await loadLogin(); render(); break;
   }
 });
@@ -274,6 +316,7 @@ document.addEventListener('change', e => {
   if (el.id === 'f-prio') { ui.prio = el.value; renderResults(); }
   if (el.id === 'f-hide') { ui.hideDone = el.checked; pref.set('hideDone', el.checked); renderResults(); }
   if (el.id === 'f-mine') { ui.onlyMine = el.checked; pref.set('onlyMine', el.checked); renderResults(); }
+  if (el.id === 'liste-comptes') api('POST', '/api/securite/liste-comptes', { actif: el.checked }).then(() => toast(el.checked ? 'Liste des comptes affichée sur l\'écran de connexion' : 'Liste des comptes masquée')).catch(err => { toast(err.message); el.checked = !el.checked; });
   if (el.name === 'theme') { pref.set('theme', el.value); applyTheme(); }
   if (el.name === 'cn-emoji') { const f = $('#cn-emoji-free'); if (f) f.value = ''; }
 });
@@ -295,11 +338,28 @@ function showErr(f, msg) {
 async function onSubmit(f) {
   if (f.id === 'login-form') {
     try {
-      await api('POST', '/api/login', { userId: ui.loginUser, password: $('#l-pwd').value });
-      ui.loginErr = ''; ui.filter = []; ui.tlGroup = 'all';
-      await refresh(); startEvents(); go('home');
-    } catch (err) { ui.loginErr = err.message; render(); $('#l-pwd')?.focus(); }
+      const nameEl = $('#l-name');
+      await api('POST', '/api/login', nameEl ? { name: nameEl.value.trim(), password: $('#l-pwd').value } : { userId: ui.loginUser, password: $('#l-pwd').value });
+      ui.loginErr = ''; ui.loginName = ''; ui.filter = []; ui.tlGroup = 'all';
+      await refresh(); startEvents(); if (S.mustChange) { ui.pwdErr = ''; render(); } else go('home');
+    } catch (err) { ui.loginErr = err.message; if ($('#l-name')) ui.loginName = $('#l-name').value; render(); ($('#l-pwd') || $('#l-name'))?.focus(); }
   }
+  if (f.id === 'forced-pwd-form') {
+    const o = $('#fp-old').value, n = $('#fp-new').value, n2 = $('#fp-new2').value;
+    if (n !== n2) { ui.pwdErr = 'Les deux mots de passe ne sont pas identiques.'; render(); return; }
+    try { await api('POST', '/api/password', { oldPassword: o, newPassword: n }); ui.pwdErr = ''; await refresh(); startEvents(); go('home'); toast('Mot de passe enregistré : bienvenue !'); }
+    catch (err) { ui.pwdErr = err.message; render(); }
+  }
+  if (f.id === 'backup-form') {
+    const pwd = $('#bk-pwd').value;
+    try {
+      const res = await fetch('/api/sauvegarde', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwd }) });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Erreur ' + res.status); }
+      downloadFile(`projets-le-roy-${iso(today())}.sql.gz`, await res.blob(), 'application/gzip');
+      $('#bk-pwd').value = ''; toast('Sauvegarde téléchargée');
+    } catch (err) { toast(err.message); }
+  }
+  if (f.id === 'audit-form') { ui.auditAction = $('#au-action').value; ui.auditQ = $('#au-q').value.trim(); ui.audit = null; render(); loadAudit(); }
   if (f.id === 'task-form') {
     const title = $('#f-title').value.trim(), start = $('#f-start').value, end = $('#f-end').value;
     if (!title) return showErr(f, 'Donnez un titre à la tâche.');
@@ -317,8 +377,9 @@ async function onSubmit(f) {
   }
   if (f.id === 'group-form') {
     const name = $('#g-name').value.trim(); if (!name) return showErr(f, 'Donnez un nom au groupe.');
-    const members = [...f.querySelectorAll('input[name=g-mem]')].filter(x => x.checked).map(x => x.value);
-    if (!isAdmin() && !members.includes(cur().id)) members.unshift(cur().id);
+    const roleOf = id => (f.querySelector(`select[name=g-role][data-for="${id}"]`) || {}).value || 'membre';
+    const members = [...f.querySelectorAll('input[name=g-mem]')].filter(x => x.checked || x.disabled && x.defaultChecked).map(x => ({ id: x.value, role: roleOf(x.value) }));
+    if (!isAdmin() && !members.some(m => m.id === cur().id)) members.unshift({ id: cur().id, role: 'responsable' });
     if (!members.length) return showErr(f, 'Choisissez au moins une personne pour ce groupe.');
     const data = { name, members, icon: f.querySelector('input[name=g-icon]:checked').value, color: f.querySelector('input[name=g-color]:checked').value };
     const editId = ui.editGroup;
@@ -342,7 +403,7 @@ async function onSubmit(f) {
   }
   if (f.id === 'pwd-form') {
     const oldPassword = $('#p-old').value, newPassword = $('#p-new').value;
-    if (newPassword.length < 6) { ui.pwdErr = 'Le nouveau mot de passe doit faire au moins 6 caractères.'; render(); return; }
+    if (newPassword.length < 12) { ui.pwdErr = 'Le nouveau mot de passe doit faire au moins 12 caractères (une phrase facile à retenir convient très bien).'; render(); return; }
     try {
       await api('POST', '/api/password', { oldPassword, newPassword });
       ui.pwdErr = ''; await refresh(); render(); toast('Mot de passe mis à jour');
@@ -350,13 +411,14 @@ async function onSubmit(f) {
   }
   if (f.id === 'user-form') {
     const n = $('#n-name').value.trim(), p = $('#n-pwd').value; if (!n || !p) return;
-    await act(() => api('POST', '/api/users', { name: n, password: p, role: $('#n-role').value }), n + ' ajouté à l\'équipe');
+    if (await act(() => api('POST', '/api/users', { name: n, password: p, role: $('#n-role').value }), n + ' ajouté à l\'équipe')) alert('Mot de passe provisoire de ' + n + ' :\n\n' + p + '\n\nCommuniquez-le de vive voix ou par message privé. ' + n + ' devra en choisir un autre à sa première connexion.');
   }
   if (f.id === 'user-edit') {
-    const fd = new FormData(f), body = { name: fd.get('name'), role: fd.get('role') };
+    const fd = new FormData(f), body = { name: fd.get('name'), email: fd.get('email') || '' };
+    if (!f.elements.role.disabled) body.role = fd.get('role');
     if (fd.get('password')) body.password = fd.get('password');
     if (!f.elements.active.disabled) body.active = f.elements.active.checked;
-    try { await api('PUT', '/api/users/' + f.dataset.id, body); ui.editUser = null; await refresh(); render(); toast('Compte enregistré'); }
+    try { await api('PUT', '/api/users/' + f.dataset.id, body); ui.editUser = null; await refresh(); render(); toast(body.password ? 'Compte enregistré — mot de passe provisoire : ' + body.password : 'Compte enregistré'); if (body.password) alert('Mot de passe provisoire de ' + body.name + ' :\n\n' + body.password + '\n\nCommuniquez-le de vive voix ou par message privé : il devra en choisir un autre à sa prochaine connexion.'); }
     catch (err) { showErr(f, err.message); }
   }
   if (f.id === 'cat-new') {
@@ -377,7 +439,7 @@ async function onSubmit(f) {
   }
   if (f.id === 'key-form') {
     try {
-      const r = await api('POST', '/api/tokens', { name: $('#k-name').value.trim() || 'Claude' });
+      const r = await api('POST', '/api/tokens', { name: $('#k-name').value.trim() || 'Claude', scope: $('#k-scope').value, days: Number($('#k-days').value) });
       ui.newKey = r.token; await loadKeys(); render();
     } catch (err) { toast(err.message); }
   }

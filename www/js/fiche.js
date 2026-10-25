@@ -9,7 +9,10 @@ const ACTIONS = {
   etape_ajoutee: d => `a ajouté l'étape « ${d} »`,
   etape_supprimee: d => `a supprimé l'étape « ${d} »`,
   terminee: () => 'a marqué la tâche terminée',
-  rouverte: () => 'a rouvert la tâche'
+  rouverte: () => 'a rouvert la tâche',
+  supprimee: () => 'a mis la tâche à la corbeille',
+  restauree: () => 'a restauré la tâche depuis la corbeille',
+  commentaire_supprime: d => `a supprimé un commentaire : « ${d} »`
 };
 
 let lastFocus = null;
@@ -27,7 +30,7 @@ function renderModal() {
   const focused = document.activeElement && m.contains(document.activeElement) ? document.activeElement.id : null;
   const scroll = m.querySelector('.sheet')?.scrollTop || 0;
 
-  const g = groupById(t.groupId), cat = catById(t.type), p = pct(t), done = t.steps.filter(s => s.done).length, can = canEdit(t), st = status(t);
+  const g = groupById(t.groupId), cat = catById(t.type), p = pct(t), done = t.steps.filter(s => s.done).length, can = canEdit(t), st = status(t), canMod = !!(t.can && t.can.edit), canDel = !!(t.can && t.can.delete);
   const det = ui.details && ui.details.taskId === t.id ? ui.details : null;
   m.hidden = false; document.documentElement.style.overflow = 'hidden';
   m.innerHTML = `<div class="scrim" data-act="close-modal"></div><div class="sheet ${wasOpen ? '' : 'anim'}" role="dialog" aria-modal="true" aria-labelledby="mt" style="--g:${esc(g.color)}">
@@ -49,9 +52,9 @@ function renderModal() {
     const u = userById(c.userId), mineOrAdmin = c.userId === me.id || isAdmin();
     return `<li><span class="av">${ini(u)}</span><div><p class="c-h"><b>${esc(u.name)}</b><span>${fmtStamp(c.at)}</span></p><p class="c-b">${esc(c.body)}</p></div>${mineOrAdmin ? `<button class="del" data-act="del-comment" data-id="${esc(c.id)}" aria-label="Supprimer le commentaire">${ic('trash')}</button>` : '<span></span>'}</li>`;
   }).join('') || '<li class="hint none">Aucun commentaire. Notez ici les échanges, relances, informations utiles…</li>' : '<li class="hint none">Chargement…</li>'}</ul>
- <form id="comment-form" class="addcomment"><textarea id="c-body" maxlength="3000" rows="2" placeholder="Écrire un commentaire…" aria-label="Nouveau commentaire"></textarea><button class="btn sm">${ic('send', 'sm')}Envoyer</button></form>
+ ${can ? `<form id="comment-form" class="addcomment"><textarea id="c-body" maxlength="3000" rows="2" placeholder="Écrire un commentaire…" aria-label="Nouveau commentaire"></textarea><button class="btn sm">${ic('send', 'sm')}Envoyer</button></form>` : ''}
  ${det && det.activity.length ? `<details class="history" ${ui.historyOpen ? 'open' : ''}><summary>Historique (${det.activity.length})</summary><ul>${det.activity.map(a => `<li><span class="h-when">${fmtStamp(a.at)}</span><span><b>${esc(userById(a.userId).name)}</b> ${esc((ACTIONS[a.action] || (() => a.action))(a.detail))}</span></li>`).join('')}</ul></details>` : ''}
- ${can ? `<div class="sheet-f"><button class="btn" data-act="dup-task">${ic('copy', 'sm')}Dupliquer</button><button class="btn" data-act="edit-task">Modifier la tâche</button><button class="btn danger ${ui.confirmDel ? 'armed' : ''}" data-act="del-task">${ui.confirmDel ? 'Confirmer la suppression' : 'Supprimer'}</button></div>` : ''}
+ ${(canMod || canDel || can) ? `<div class="sheet-f">${can ? `<button class="btn" data-act="dup-task">${ic('copy', 'sm')}Dupliquer</button>` : ''}${canMod ? `<button class="btn" data-act="edit-task">Modifier la tâche</button>` : ''}${canDel ? `<button class="btn danger ${ui.confirmDel ? 'armed' : ''}" data-act="del-task">${ui.confirmDel ? 'Confirmer : mettre à la corbeille' : 'Supprimer'}</button>` : ''}</div>` : ''}
  </div>`;
   for (const [id, v] of Object.entries(keep)) { const el = document.getElementById(id); if (el) el.value = v; }
   const sheet = m.querySelector('.sheet');
