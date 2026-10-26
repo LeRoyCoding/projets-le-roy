@@ -2,10 +2,10 @@
 // Données d'exemple (celles de la maquette) pour essayer l'application ou faire des captures d'écran.
 //   LR_DB_NAME=... LR_DB_USER=... LR_DB_PASS=... php outils/donnees-demo.php
 // Refuse de s'exécuter si la base contient déjà des tâches (jamais sur de vraies données).
-// Comptes créés : Antoine, Claire, Julien (mot de passe « demo0000 »). Le compte Administrateur doit exister (outils/test-base.php admin).
+// Comptes créés : Antoine, Claire, Julien (mot de passe « demo-demo-0000 »). Le compte Administrateur doit exister (outils/test-base.php admin).
 declare(strict_types=1);
-require dirname(__DIR__) . '/www/api/lib.php';
-migrer();
+require __DIR__ . '/_cli.php';
+if (schema_state()['state'] !== 'ok') cli_die("La base n'est pas prête : lancez d'abord php outils/migrer.php --appliquer");
 if ((int)val('SELECT COUNT(*) FROM tasks') > 0) { fwrite(STDERR, "La base contient déjà des tâches : rien n'a été fait.\n"); exit(1); }
 $day = fn(int $n) => date('Y-m-d', strtotime(($n >= 0 ? "+$n" : (string)$n) . ' days'));
 $ago = fn(int $n) => gmdate('Y-m-d H:i:s', time() - $n * 86400);
@@ -13,7 +13,7 @@ tx(function () use ($day, $ago) {
     $U = [];
     foreach (['Antoine', 'Claire', 'Julien'] as $i => $name) {
         $U[$name] = newId();
-        q('INSERT INTO users (id, name, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)', [$U[$name], $name, password_hash('demo0000', PASSWORD_BCRYPT), 'user', gmdate('Y-m-d H:i:s', time() + $i)]);
+        q('INSERT INTO users (id, name, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)', [$U[$name], $name, password_hash('demo-demo-0000', PASSWORD_BCRYPT, ['cost' => 4]), 'user', gmdate('Y-m-d H:i:s', time() + $i)]);
     }
     $G = [];
     $groups = [['lr', 'Le Roy', 'img:lr', '#C4122F', ['Antoine', 'Claire', 'Julien']], ['llc', 'LLC', 'img:llc', '#666A6F', ['Antoine', 'Claire']],
@@ -21,7 +21,7 @@ tx(function () use ($day, $ago) {
     foreach ($groups as $i => [$k, $name, $icon, $color, $members]) {
         $G[$k] = newId();
         q('INSERT INTO groupes (id, name, icon, color, position, created_at) VALUES (?, ?, ?, ?, ?, ?)', [$G[$k], $name, $icon, $color, $i + 1, now()]);
-        foreach ($members as $m) q('INSERT INTO group_members (group_id, user_id) VALUES (?, ?)', [$G[$k], $U[$m]]);
+        foreach ($members as $j => $m) q('INSERT INTO group_members (group_id, user_id, role) VALUES (?, ?, ?)', [$G[$k], $U[$m], $j === 0 ? 'responsable' : 'membre']);
     }
     // [groupe, responsable, catégorie, titre, début, fin, description, étapes, étapes faites, terminée il y a n jours, priorité]
     $T = [
@@ -52,4 +52,4 @@ tx(function () use ($day, $ago) {
         if ($finiIlYa) q('UPDATE tasks SET done_at = ?, done_by = ? WHERE id = ?', [$ago($finiIlYa), $by, $id]);
     }
 });
-echo "Données d'exemple créées (comptes Antoine, Claire, Julien : mot de passe demo0000).\n";
+echo "Données d'exemple créées (comptes Antoine, Claire, Julien : mot de passe demo-demo-0000).\n";

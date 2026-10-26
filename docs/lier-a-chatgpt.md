@@ -1,30 +1,22 @@
 # Lier Projets Le Roy à ChatGPT
 
-Même principe que pour Claude : ChatGPT peut lire et faire avancer **vos** tâches, avec vos droits, sans rien pouvoir supprimer.
+Même principe que pour Claude (voir [lier-a-claude.md](lier-a-claude.md)) : ChatGPT lit et fait avancer **vos** tâches, avec vos droits, sans rien pouvoir supprimer.
 
-## Étape 0 — L'administrateur active le connecteur (une seule fois)
+## Ce qu'il faut savoir
 
-Page **Compte** → **Lier à Claude ou ChatGPT** → **Activer le connecteur**.
+- L'administrateur doit **activer le connecteur** (Compte → « Lier à Claude ou ChatGPT »).
+- Adresse du connecteur : `https://votre-domaine/mcp`.
+- **La clé se transmet uniquement dans l'en-tête `Authorization: Bearer <clé>`** (ou `X-API-Key`). Elle n'est **jamais** acceptée dans l'adresse.
+- Selon la formule ChatGPT, les connecteurs personnalisés avec en-tête d'authentification peuvent ne pas être disponibles. Dans ce cas, n'utilisez pas ChatGPT avec cet outil : la sécurité prime sur la commodité (une clé dans une adresse serait enregistrée dans les journaux).
 
-## Étape 1 — Créer votre clé d'accès
+## Mise en place (si votre ChatGPT le permet)
 
-Page **Compte** → **Créer une clé d'accès** (nommez-la « ChatGPT »). **Copiez le lien personnel** qui s'affiche
-(`https://votre-site/mcp/lr_…`) : il ne sera plus affiché, et il ne faut le partager avec personne.
-
-## Étape 2 — Ajouter le connecteur dans ChatGPT
-
-1. ChatGPT → **Paramètres → Applications et connecteurs** (ou *Plugins*) → **Paramètres avancés** → activez le **mode développeur**.
-2. **Créer** (ou *Parcourir le catalogue* → bouton **+**) :
-   - Nom : `Projets Le Roy`
-   - URL du serveur MCP : votre **lien personnel**
-   - Authentification : **Aucune** (la clé est déjà dans le lien)
-3. Enregistrez. Dans une conversation, activez le connecteur puis demandez par exemple :
-   « Quelles sont mes tâches en retard ? » ou « Crée une tâche urgente "Rappeler le GAEC du Moulin" dans Le Roy pour demain ».
-
-*(Les connecteurs de ce type dépendent de la formule ChatGPT : certaines offres ne les proposent pas.)*
+1. Créez votre clé : **Compte → Lier à Claude ou ChatGPT → Créer une clé d'accès** (nom « ChatGPT », durée au choix, « lecture seule » si vous ne voulez que consulter).
+2. ChatGPT → Paramètres → Applications et connecteurs → mode développeur → **Créer** : URL du serveur MCP `https://votre-domaine/mcp`, authentification par **clé API / en-tête Bearer** : collez votre clé.
+3. Essayez : « Quelles sont mes tâches en retard ? »
 
 ## Sécurité
 
-- Seuls les outils de tâches sont ouverts (lister, créer, cocher, commenter…), **jamais** les pages de l'application.
+- Seuls les outils de tâches sont ouverts (jamais les pages de l'application), avec vos droits.
 - Supprimer la clé (Compte) ou désactiver le connecteur (administrateur) coupe l'accès immédiatement.
-- Plus de tunnel ni de script à lancer : le site est déjà sur Internet.
+- Les accès par clé sont limités (essais répétés bloqués) et visibles : « dernière utilisation » dans la liste des clés.

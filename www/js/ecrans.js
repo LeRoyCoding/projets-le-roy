@@ -21,18 +21,32 @@ function who(t) {
 
 /* ---------- Connexion ---------- */
 function vLogin() {
-  const sel = ui.loginUser, users = (L && L.users) || [];
-  const selUser = users.find(u => u.id === sel);
+  const listing = !!(L && L.listing), users = (L && L.users) || [];
+  const sel = ui.loginUser, selUser = users.find(u => u.id === sel);
+  const champMdp = nom => `<label class="field"><span>Mot de passe${nom ? ' de ' + esc(nom) : ''}</span><input type="password" id="l-pwd" autocomplete="current-password" required></label>`;
   return `<section class="login"><div class="panel">
   <div class="logo-big"><span class="logo-pill"><img src="${IMG.full}" alt="Le Roy – Lead Le Roy Concept"></span></div>
-  <p class="eyebrow">Projets &amp; tâches</p><h1>Connexion</h1><p class="lead">Choisissez votre compte.</p>
+  <p class="eyebrow">Projets &amp; tâches</p><h1>Connexion</h1><p class="lead">${listing ? 'Choisissez votre compte.' : 'Entrez votre nom et votre mot de passe.'}</p>
   ${L && L.error ? `<p class="err">${esc(L.error)}</p>` : ''}
-  <div class="ulist">${users.map(u => `<button type="button" class="ubtn ${sel === u.id ? 'on' : ''}" data-act="pick-user" data-id="${esc(u.id)}"><span class="av">${ini(u)}</span>${esc(u.name)}<small>${u.role === 'admin' ? 'Vue globale' : 'Mes tâches'}</small></button>`).join('')}</div>
-  ${selUser ? `<form id="login-form" class="form">
-   <label class="field"><span>Mot de passe de ${esc(selUser.name)}</span><input type="password" id="l-pwd" autocomplete="current-password" required></label>
-   ${ui.loginErr ? `<p class="err">${esc(ui.loginErr)}</p>` : ''}
-   <button class="btn primary">Se connecter</button></form>` : ''}
-  ${L && !L.error && !users.length ? `<p class="hint">Aucun compte pour l'instant : l'installation n'est pas terminée. Ouvrez <b>/installer.php</b> sur ce site pour créer le compte administrateur.</p>` : ''}
+  ${listing ? `<div class="ulist">${users.map(u => `<button type="button" class="ubtn ${sel === u.id ? 'on' : ''}" data-act="pick-user" data-id="${esc(u.id)}"><span class="av">${ini(u)}</span>${esc(u.name)}<small>${u.role === 'admin' ? 'Vue globale' : 'Mes tâches'}</small></button>`).join('')}</div>
+  ${selUser ? `<form id="login-form" class="form">${champMdp(selUser.name)}${ui.loginErr ? `<p class="err">${esc(ui.loginErr)}</p>` : ''}<button class="btn primary">Se connecter</button></form>` : ''}`
+  : `<form id="login-form" class="form"><label class="field"><span>Votre nom</span><input type="text" id="l-name" autocomplete="username" required maxlength="60" value="${esc(ui.loginName || '')}"></label>
+   ${champMdp('')}${ui.loginErr ? `<p class="err">${esc(ui.loginErr)}</p>` : ''}<button class="btn primary">Se connecter</button></form>`}
+ </div></section>`;
+}
+
+/* ---------- Mot de passe provisoire : à changer avant tout ---------- */
+function vMustChange() {
+  return `<section class="login"><div class="panel">
+  <div class="logo-big"><span class="logo-pill"><img src="${IMG.full}" alt="Le Roy – Lead Le Roy Concept"></span></div>
+  <p class="eyebrow">Bienvenue ${esc(S.name || '')}</p><h1>Choisissez votre mot de passe</h1>
+  <p class="lead">Le mot de passe que l'on vous a donné est provisoire. Choisissez-en un qui n'est connu que de vous : <b>12 caractères minimum</b>. Une phrase facile à retenir convient très bien (par exemple « Le café du lundi matin »).</p>
+  <form id="forced-pwd-form" class="form">
+   <label class="field"><span>Mot de passe provisoire (celui reçu)</span><input type="password" id="fp-old" autocomplete="current-password" required></label>
+   <label class="field"><span>Nouveau mot de passe</span><input type="password" id="fp-new" autocomplete="new-password" minlength="12" required></label>
+   <label class="field"><span>Nouveau mot de passe, une seconde fois</span><input type="password" id="fp-new2" autocomplete="new-password" minlength="12" required></label>
+   ${ui.pwdErr ? `<p class="err">${esc(ui.pwdErr)}</p>` : ''}
+   <div class="actions"><button type="button" class="btn" data-act="logout">Se déconnecter</button><button class="btn primary">Enregistrer et continuer</button></div></form>
  </div></section>`;
 }
 
@@ -81,7 +95,7 @@ function homeResults() {
     const list = tasks.filter(t => t.groupId === g.id).sort((a, b) =>
       (status(a) === 'done') - (status(b) === 'done') || (a.priority || 3) - (b.priority || 3) || order[status(a)] - order[status(b)] || a.end.localeCompare(b.end));
     const shared = isShared(g);
-    const canAdd = admin || (g.members || []).includes(me.id);
+    const canAdd = !!g.canCreate;
     const hidden = ui.hideDone ? S.tasks.filter(t => t.groupId === g.id && status(t) === 'done').length : 0;
     const move = (n, dir, label) => n ? `<button class="icon-btn small" data-act="grp-move" data-id="${esc(g.id)}" data-with="${esc(n.id)}" aria-label="${label} ${esc(g.name)}" title="${label}">${ic(dir)}</button>` : '';
     const ordre = admin && !filtersActive() && groups.length > 1 ? `<span class="gmove">${move(groups[gi - 1], 'left', 'Placer avant')}${move(groups[gi + 1], 'right', 'Placer après')}</span>` : '';
@@ -164,7 +178,7 @@ function vNewTask() {
   const src = ui.editId ? S.tasks.find(x => x.id === ui.editId) : (ui.dupFrom ? S.tasks.find(x => x.id === ui.dupFrom) : null);
   const t = ui.editId ? src : null;   // tâche modifiée
   const dup = !t && src ? src : null; // tâche dupliquée
-  let groups = myGroups();
+  let groups = writableGroups();
   if (src && !groups.some(x => x.id === src.groupId)) groups = [groupById(src.groupId), ...groups];
   const g = src ? src.groupId : (ui.presetGroup && groups.some(x => x.id === ui.presetGroup) ? ui.presetGroup : groups[0]?.id);
   if (!g) return `<section class="form-page"><p class="eyebrow">Nouvelle tâche</p><h1>Créer une tâche</h1><div class="panel"><p class="hint">Créez d'abord un groupe pour y ranger la tâche.</p><div class="actions"><button class="btn primary" data-act="nav" data-v="newGroup">Créer un groupe</button></div></div></section>`;
@@ -201,21 +215,24 @@ function vNewTask() {
 /* ---------- + Groupe ---------- */
 function vNewGroup() {
   const me = cur(), admin = isAdmin(), g = ui.editGroup ? S.groups.find(x => x.id === ui.editGroup) : null;
-  const members = g ? g.members || [] : (admin ? [] : [me.id]);
+  const roles = g ? (g.roles || {}) : (admin ? {} : { [me.id]: 'responsable' });
+  const members = Object.keys(roles);
   const icon = g ? g.icon : '🐔', color = g ? g.color : GROUP_COLORS[2];
   const editable = myGroups();
   const icons = GROUP_ICONS.includes(icon) ? GROUP_ICONS : [...GROUP_ICONS, icon];
   const colors = GROUP_COLORS.includes(color) ? GROUP_COLORS : [...GROUP_COLORS, color];
   // Personnes proposées : comptes actifs + membres actuels désactivés (pour pouvoir les retirer).
   const candidates = S.users.filter(u => u.role !== 'admin' && (u.active || members.includes(u.id)));
+  const roleSel = (id, role, lock) => `<select name="g-role" data-for="${esc(id)}" aria-label="Rôle dans le groupe" ${lock ? 'disabled' : ''}>${Object.entries(ROLES).map(([k, l]) => `<option value="${k}" ${k === role ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
   return `<section class="form-page"><p class="eyebrow">${g ? 'Modifier le groupe' : 'Nouveau groupe'}</p><h1>${g ? esc(g.name) : 'Créer un groupe'}</h1>
  <form id="group-form" class="panel form" novalidate>
   <label class="field"><span>Nom du groupe</span><input type="text" id="g-name" maxlength="80" required value="${esc(g ? g.name : '')}" placeholder="Ex. : Salon 2027"></label>
-  <fieldset class="field"><legend>Membres</legend><div class="pick">${candidates.map(u => {
+  <fieldset class="field"><legend>Membres et rôles</legend><ul class="mem-list">${candidates.map(u => {
     const on = members.includes(u.id), lock = !admin && u.id === me.id;
-    return `<label><input type="checkbox" name="g-mem" value="${esc(u.id)}" ${on ? 'checked' : ''} ${lock ? 'disabled' : ''}><span class="opt"><span class="av">${ini(u)}</span>${esc(u.name)}${lock ? ' (vous)' : ''}${u.active ? '' : ' (désactivé)'}</span></label>`;
-  }).join('') || '<p class="hint">Aucun compte utilisateur pour l\'instant : ajoutez l\'équipe depuis l\'onglet « Compte ».</p>'}</div>
-   <p class="hint">Avec deux membres ou plus, le groupe est commun : chacun voit et peut faire avancer toutes ses tâches. Avec un seul membre, il reste privé.</p></fieldset>
+    return `<li><label><input type="checkbox" name="g-mem" value="${esc(u.id)}" ${on ? 'checked' : ''} ${lock ? 'disabled' : ''}><span class="opt"><span class="av">${ini(u)}</span>${esc(u.name)}${lock ? ' (vous)' : ''}${u.active ? '' : ' (désactivé)'}</span></label>${roleSel(u.id, roles[u.id] || 'membre', lock)}</li>`;
+  }).join('') || '<li><p class="hint">Aucun compte utilisateur pour l\'instant : ajoutez l\'équipe depuis l\'onglet « Compte ».</p></li>'}</ul>
+   <p class="hint"><b>Responsable</b> : gère le groupe, modifie et supprime toutes ses tâches, restaure la corbeille. <b>Membre</b> : crée des tâches, coche les étapes, commente, modifie les tâches qui le concernent. <b>Lecteur</b> : consulte seulement. Un groupe a toujours au moins un responsable.
+   Avec deux membres ou plus, le groupe est commun ; avec un seul, il reste privé.</p></fieldset>
   <fieldset class="field"><legend>Logo</legend><div class="pick">${icons.map(x => `<label><input type="radio" name="g-icon" value="${esc(x)}" ${x === icon ? 'checked' : ''} aria-label="Logo ${x.startsWith('img:') ? (x === 'img:lr' ? 'Le Roy' : 'LLC') : esc(x)}"><span class="opt tile">${gIcon(x, '')}</span></label>`).join('')}</div></fieldset>
   <fieldset class="field"><legend>Couleur</legend><div class="pick">${colors.map((c, i) => `<label><input type="radio" name="g-color" value="${esc(c)}" ${c === color ? 'checked' : ''} aria-label="Couleur ${i + 1}"><span class="swatch" style="--c:${esc(c)}"></span></label>`).join('')}</div></fieldset>
   <div class="actions"><button type="button" class="btn" data-act="cancel-form">Annuler</button><button class="btn primary">${g ? 'Enregistrer' : 'Créer le groupe'}</button></div>
@@ -223,10 +240,10 @@ function vNewGroup() {
  <div class="panel" style="margin-top:16px"><h3>Groupes existants</h3><ul class="glist">${editable.map((x, i) => {
     const n = S.tasks.filter(t => t.groupId === x.id).length;
     const fleches = admin ? `<button class="del" data-act="grp-move" data-id="${esc(x.id)}" data-dir="-1" aria-label="Monter ${esc(x.name)}" ${i === 0 ? 'disabled' : ''}>${ic('up')}</button><button class="del" data-act="grp-move" data-id="${esc(x.id)}" data-dir="1" aria-label="Descendre ${esc(x.name)}" ${i === editable.length - 1 ? 'disabled' : ''}>${ic('down')}</button>` : '';
-    return `<li><span class="gtile ${x.icon.startsWith('img:') ? 'img' : ''}" style="--g:${esc(x.color)}">${gIcon(x.icon, '')}</span><b>${groupName(x)}</b>${avStack(x.members || [])}<span class="hint">${plural(n, 'tâche')}</span>
-  ${fleches}<button class="del" data-act="edit-group" data-id="${esc(x.id)}" aria-label="Modifier ${esc(x.name)}">${ic('edit')}</button>${n ? '' : `<button class="del" data-act="del-group" data-id="${esc(x.id)}" aria-label="Supprimer ${esc(x.name)}">${ic('trash')}</button>`}</li>`;
+    return `<li><span class="gtile ${x.icon.startsWith('img:') ? 'img' : ''}" style="--g:${esc(x.color)}">${gIcon(x.icon, '')}</span><b>${groupName(x)}</b><span class="rolechip">${esc(ROLES[x.myRole] || 'Administrateur')}</span>${avStack(x.members || [])}<span class="hint">${plural(n, 'tâche')}</span>
+  ${fleches}${x.canEdit ? `<button class="del" data-act="edit-group" data-id="${esc(x.id)}" aria-label="Modifier ${esc(x.name)}">${ic('edit')}</button>${n ? '' : `<button class="del" data-act="del-group" data-id="${esc(x.id)}" aria-label="Mettre ${esc(x.name)} à la corbeille" title="Mettre à la corbeille">${ic('trash')}</button>`}` : ''}</li>`;
   }).join('') || '<li class="hint">Aucun groupe pour l\'instant.</li>'}</ul>
-  <p class="hint" style="margin-top:10px">Un groupe ne peut être supprimé que s'il ne contient plus de tâche.${admin ? ' Les flèches ↑ ↓ changent l\'ordre des groupes sur l\'accueil et la timeline, pour tout le monde.' : ''}</p></div></section>`;
+  <p class="hint" style="margin-top:10px">Un groupe ne peut être supprimé que s'il ne contient plus de tâche ; il va alors à la corbeille, d'où il peut être restauré.${admin ? ' Les flèches ↑ ↓ changent l\'ordre des groupes sur l\'accueil et la timeline, pour tout le monde.' : ''}</p></div></section>`;
 }
 
 /* ---------- Catégories ---------- */
@@ -244,13 +261,13 @@ function vCategories() {
     const others = cats.filter(x => x.id !== c.id && !x.hidden);
     return `<li class="${c.hidden ? 'is-hidden' : ''}"><span class="gtile cat-tile">${emo(c.emoji)}</span><b>${esc(c.label)}</b>
     ${c.hidden ? '<span class="rolechip">Masquée</span>' : ''}<span class="hint">${plural(n, 'tâche')}</span>
-    <span class="row-btns">
+    ${admin ? `<span class="row-btns">
      <button class="del" data-act="cat-move" data-id="${esc(c.id)}" data-dir="-1" aria-label="Monter" ${i === 0 ? 'disabled' : ''}>${ic('up')}</button>
      <button class="del" data-act="cat-move" data-id="${esc(c.id)}" data-dir="1" aria-label="Descendre" ${i === cats.length - 1 ? 'disabled' : ''}>${ic('down')}</button>
      <button class="del" data-act="cat-edit" data-id="${esc(c.id)}" aria-label="Modifier ${esc(c.label)}">${ic('edit')}</button>
      <button class="del" data-act="cat-hide" data-id="${esc(c.id)}" aria-label="${c.hidden ? 'Afficher' : 'Masquer'} ${esc(c.label)}" title="${c.hidden ? 'Afficher à nouveau' : 'Masquer (ne sera plus proposée)'}">${ic(c.hidden ? 'eye' : 'eyeoff')}</button>
-     ${!n || admin ? `<button class="del" data-act="cat-del" data-id="${esc(c.id)}" aria-label="Supprimer ${esc(c.label)}">${ic('trash')}</button>` : ''}
-    </span>
+     <button class="del" data-act="cat-del" data-id="${esc(c.id)}" aria-label="Supprimer ${esc(c.label)}">${ic('trash')}</button>
+    </span>` : ''}
     ${ui.catDel === c.id && n ? `<form class="cat-del-form" data-id="${esc(c.id)}"><span>Ses ${plural(n, 'tâche')} iront dans :</span>
       <select name="remplacer">${others.map(x => `<option value="${esc(x.id)}">${esc(x.emoji)} ${esc(x.label)}</option>`).join('')}</select>
       <button class="btn danger armed sm">Supprimer</button><button type="button" class="btn sm" data-act="cat-del-cancel">Annuler</button></form>` : ''}</li>`;
@@ -263,7 +280,7 @@ function vCategories() {
    <div class="actions"><button class="btn primary">Créer la catégorie</button></div></form>
   <div class="panel" style="margin-top:16px"><h3>Catégories existantes</h3><ul class="glist cat-list">${cats.map(row).join('')}</ul>
    <p class="hint" style="margin-top:10px">Une catégorie masquée n'est plus proposée pour les nouvelles tâches, mais les anciennes la gardent.
-   ${admin ? 'Une catégorie utilisée peut être supprimée : ses tâches sont alors déplacées dans une autre catégorie.' : 'Seules les catégories inutilisées peuvent être supprimées (l\'administrateur peut aussi supprimer les autres).'}</p></div></section>`;
+   ${admin ? 'Une catégorie utilisée peut être supprimée : ses tâches sont alors déplacées dans une autre catégorie.' : 'Tout le monde peut proposer une nouvelle catégorie ; seul l\'administrateur les modifie, les masque, les réordonne ou les supprime.'}</p></div></section>`;
 }
 
 /* ---------- Compte ---------- */
@@ -276,22 +293,28 @@ function vAccount() {
   <button class="btn" data-act="logout">${ic('logout', 'sm')}Se déconnecter</button></div>
  ${vAcces()}
  <form id="pwd-form" class="panel form"><h3>Changer de mot de passe</h3>
-  ${admin && S.defaultAdminPassword ? `<p class="warnbox">${emo('🔑')} Le mot de passe est encore « admin » : choisissez-en un nouveau.</p>` : ''}
+  <p class="hint">12 caractères minimum : une phrase facile à retenir convient très bien. Évitez votre nom, « leroy » et les mots courants.</p>
   <div class="row2"><label class="field"><span>Mot de passe actuel</span><input type="password" id="p-old" autocomplete="current-password"></label>
-  <label class="field"><span>Nouveau mot de passe</span><input type="password" id="p-new" autocomplete="new-password"></label></div>
+  <label class="field"><span>Nouveau mot de passe</span><input type="password" id="p-new" autocomplete="new-password" minlength="12"></label></div>
   ${ui.pwdErr ? `<p class="err">${esc(ui.pwdErr)}</p>` : ''}
   <div class="actions"><button class="btn primary">Mettre à jour</button></div></form>
+ <form id="prefs-form" class="panel form"><h3>Mes notifications</h3>
+  <p class="hint">La cloche en haut de l'écran signale vos retards et ce qui vous concerne. Vous pouvez aussi recevoir, chaque matin, un résumé par e-mail (uniquement s'il y a quelque chose à signaler).</p>
+  <div class="row2"><label class="field"><span>Mon adresse e-mail</span><input type="email" id="pf-email" maxlength="190" value="${esc((S.prefs && S.prefs.email) || '')}" placeholder="(facultative)"></label>
+  <label class="toggle" style="align-self:end"><input type="checkbox" id="pf-daily" ${S.prefs && S.prefs.notifyDaily ? 'checked' : ''}><span>Recevoir le résumé quotidien par e-mail</span></label></div>
+  <div class="actions"><button class="btn primary sm">Enregistrer</button></div></form>
  <div class="panel"><h3>Affichage</h3><div class="pick" role="radiogroup" aria-label="Thème">
   ${[['auto', '🖥️', 'Comme l\'ordinateur'], ['light', '☀️', 'Clair'], ['dark', '🌙', 'Sombre']].map(([v, e, l]) => `<label><input type="radio" name="theme" value="${v}" ${theme === v ? 'checked' : ''}><span class="opt">${emo(e)}${l}</span></label>`).join('')}
  </div></div>
+ ${admin ? vSecurite() : ''}
  ${admin ? vTeam() : ''}
  ${vClaude()}
  <div class="panel"><h3>Données</h3>
-  <div class="data-btns">
-   <button class="btn" data-act="export-csv">${ic('download', 'sm')}Exporter les tâches (Excel)</button>
-   ${admin ? `<a class="btn" href="/api/sauvegarde" download>${ic('download', 'sm')}Télécharger une sauvegarde complète</a>` : ''}
-  </div>
-  <p class="hint" style="margin-top:10px">L'export contient les tâches que vous voyez, avec leur avancement.${admin ? ' La sauvegarde complète est un fichier à garder en lieu sûr (clé USB, disque réseau) ; elle se réimporte dans phpMyAdmin. OVHcloud fait aussi des sauvegardes automatiques de la base (Manager OVH → Bases de données).' : ''}</p></div>
+  <div class="data-btns"><button class="btn" data-act="export-csv">${ic('download', 'sm')}Exporter les tâches (Excel)</button></div>
+  <p class="hint" style="margin-top:10px">L'export contient les tâches que vous voyez, avec leur avancement.</p>
+  ${admin ? `<form id="backup-form" class="form" style="margin-top:14px"><h4>Sauvegarde complète (administrateur)</h4>
+   <p class="hint">Télécharge toute la base dans un fichier compressé (.sql.gz) à garder en lieu sûr. Retapez votre mot de passe pour confirmer : ce fichier contient toutes les données.</p>
+   <div class="inline-key"><input type="password" id="bk-pwd" placeholder="Votre mot de passe" autocomplete="current-password" required aria-label="Votre mot de passe"><button class="btn sm">${ic('download', 'sm')}Télécharger la sauvegarde</button></div></form>` : ''}</div>
  <p class="hint version">Projets Le Roy · version ${esc(S.version || '')}</p>
  </section>`;
 }
@@ -313,6 +336,23 @@ function vAcces() {
       <p class="hint">Sur un téléphone ou une tablette : ouvrez l'appareil photo et visez le QR code.</p>
     </div></div></div>`;
 }
+function vSecurite() {
+  const x = ui.sec, b = ui.backups;
+  if (!x) return `<div class="panel"><h3>${emo('🛡️')} Sécurité</h3><p class="hint">Chargement…</p></div>`;
+  const nv = { critique: ['🚨', 'err'], important: ['⚠️', 'warnbox'], info: ['ℹ️', 'hint'] };
+  const al = x.alertes.length ? x.alertes.map(a => `<p class="${nv[a.niveau][1]}">${emo(nv[a.niveau][0])} ${esc(a.texte)}</p>`).join('') : `<p class="hint">${emo('✅')} Aucun point de vigilance.</p>`;
+  const sch = x.schema;
+  return `<div class="panel"><h3>${emo('🛡️')} Sécurité et sauvegardes</h3>${al}
+  <ul class="team keys">
+   <li><b>Base de données</b><span class="meta">version ${sch.version} sur ${sch.target} — ${sch.state === 'ok' ? 'à jour' : esc(sch.state)}</span><span></span><span></span></li>
+   <li><b>Dernière sauvegarde</b><span class="meta">${x.sauvegarde.dernierOk ? esc(x.sauvegarde.dernierOk) + ' · ' + (x.sauvegarde.chiffree ? 'chiffrée' : 'non chiffrée') : 'aucune'}</span><span></span><span></span></li>
+   <li><b>Sessions ouvertes</b><span class="meta">${x.sessions} · échecs de connexion sur 24 h : ${x.echecs24h}</span><span></span><span></span></li>
+  </ul>
+  <label class="toggle"><input type="checkbox" id="liste-comptes" ${x.listeComptes ? 'checked' : ''}><span>Afficher la liste des comptes sur l'écran de connexion (désactivé par défaut : chacun tape son nom)</span></label>
+  ${b && b.sauvegardes.length ? `<details class="history"><summary>Sauvegardes conservées sur l'hébergement (${b.sauvegardes.length})</summary><ul>${b.sauvegardes.map(f => `<li><span class="h-when">${esc(f.date || '')}</span><span>${esc(f.raison || '')} · ${f.chiffree ? 'chiffrée' : 'non chiffrée'} · ${f.verifiee ? 'vérifiée' : 'non vérifiée'} · ${Math.round((f.octets || 0) / 1024)} Ko</span></li>`).join('')}</ul></details>` : ''}
+  ${ui.adminKeys && ui.adminKeys.length ? `<details class="history"><summary>Clés d'accès de toute l'équipe (${ui.adminKeys.length})</summary><ul class="keys-admin">${ui.adminKeys.map(k => `<li><span class="h-when">${esc(k.userName)}</span><span>${esc(k.name)} · ${esc(k.prefix || '')}… · ${k.scope === 'lecture' ? 'lecture' : 'écriture'}${k.lastUsed ? ' · vue ' + fmtStamp(k.lastUsed) : ''} <button class="btn sm danger" data-act="admin-key-revoke" data-id="${esc(k.id)}">Révoquer</button></span></li>`).join('')}</ul></details>` : ''}
+  <p class="hint">Journal complet des opérations sensibles : onglet « Journal ». Sauvegardes chiffrées vers le serveur interne : voir docs/sauvegardes.md.</p></div>`;
+}
 function vTeam() {
   const rows = S.users.map(u => {
     const n = S.taskCounts[u.id] || 0;
@@ -320,11 +360,13 @@ function vTeam() {
       return `<li class="team-edit"><form id="user-edit" class="form" data-id="${esc(u.id)}">
        <div class="inline3">
         <label class="field"><span>Nom</span><input type="text" name="name" maxlength="60" required value="${esc(u.name)}"></label>
-        <label class="field"><span>Nouveau mot de passe</span><input type="text" name="password" placeholder="(inchangé)" autocomplete="off"></label>
-        <label class="field"><span>Rôle</span><select name="role"><option value="user" ${u.role === 'user' ? 'selected' : ''}>Utilisateur</option><option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Administrateur</option></select></label>
+        <label class="field"><span>Adresse e-mail</span><input type="email" name="email" maxlength="190" value="${esc(u.email || '')}" placeholder="(facultative)"></label>
+        <label class="field"><span>Rôle</span><select name="role" ${u.id === S.me ? 'disabled' : ''}><option value="user" ${u.role === 'user' ? 'selected' : ''}>Utilisateur</option><option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Administrateur</option></select></label>
         <span></span></div>
+       <div class="inline-key"><input type="text" name="password" id="ue-pwd" placeholder="Nouveau mot de passe provisoire (laisser vide = inchangé)" autocomplete="off"><button type="button" class="btn sm" data-act="gen-pwd" data-target="ue-pwd">Générer</button></div>
+       <p class="hint">Avec un nouveau mot de passe, ${esc(u.name)} sera déconnecté(e) partout et devra en choisir un autre à sa prochaine connexion. Communiquez-le de vive voix ou par message privé.</p>
        <label class="toggle"><input type="checkbox" name="active" ${u.active ? 'checked' : ''} ${u.id === S.me ? 'disabled' : ''}><span>Compte actif (peut se connecter)</span></label>
-       <div class="actions"><button type="button" class="btn sm" data-act="user-edit-cancel">Annuler</button><button class="btn primary sm">Enregistrer</button></div></form></li>`;
+       <div class="actions"><button type="button" class="btn sm" data-act="user-logout" data-id="${esc(u.id)}">Déconnecter de tous ses appareils</button><button type="button" class="btn sm" data-act="user-edit-cancel">Annuler</button><button class="btn primary sm">Enregistrer</button></div></form></li>`;
     }
     return `<li class="${u.active ? '' : 'is-hidden'}"><span class="av">${ini(u)}</span><b>${esc(u.name)}</b><span class="meta">${plural(n, 'tâche')}</span>
      <span class="rolechip ${u.active ? u.role : ''}">${!u.active ? 'Désactivé' : u.role === 'admin' ? 'Admin' : 'Utilisateur'}</span>
@@ -332,28 +374,31 @@ function vTeam() {
   }).join('');
   return `<div class="panel"><h3>Équipe</h3><ul class="team">${rows}</ul>
   <form id="user-form" class="inline3"><label class="field"><span>Nom</span><input type="text" id="n-name" maxlength="60" required></label>
-  <label class="field"><span>Mot de passe</span><input type="text" id="n-pwd" required minlength="6" placeholder="6 caractères minimum" autocomplete="off"></label>
+  <label class="field"><span>Mot de passe provisoire</span><input type="text" id="n-pwd" required minlength="12" placeholder="12 caractères minimum" autocomplete="off"></label>
   <label class="field"><span>Rôle</span><select id="n-role"><option value="user">Utilisateur</option><option value="admin">Administrateur</option></select></label>
-  <button class="btn primary">Ajouter</button></form>
-  <p class="hint" style="margin-top:10px">Chaque nouvel utilisateur reçoit automatiquement son groupe privé « Perso ». Le crayon permet de renommer, de changer le mot de passe (en cas d'oubli) ou de désactiver un compte : il ne pourra plus se connecter mais ses tâches restent.</p></div>`;
+  <span><button type="button" class="btn sm" data-act="gen-pwd" data-target="n-pwd">Générer</button> <button class="btn primary">Ajouter</button></span></form>
+  <p class="hint" style="margin-top:10px">Chaque nouvel utilisateur reçoit son groupe privé « Perso » et doit choisir son propre mot de passe à sa première connexion. Le crayon permet de renommer, de réinitialiser le mot de passe (en cas d'oubli), de déconnecter ses appareils ou de désactiver un compte : il ne pourra plus se connecter mais ses tâches restent.</p></div>`;
 }
 function vClaude() {
   const keys = ui.keys || [];
   const cx = S.connecteur || { actif: false };
-  const lien = k => `${location.origin}/mcp/${k}`;
+  const site = location.origin;
+  const exp = k => k.expiresAt ? 'expire le ' + fmtStamp(k.expiresAt).replace(/ \d\d:\d\d$/, '') : '';
   return `<div class="panel"><h3>${emo('🤖')} Lier à Claude ou ChatGPT</h3>
-  <p class="note">Une clé d'accès permet à un assistant (Claude ou ChatGPT) de lire et de faire avancer <b>vos</b> tâches : « Quelles sont mes tâches en retard ? », « Crée un devis pour l'élevage Martin avec ces étapes… ». La clé a les mêmes droits que votre compte, et l'assistant ne peut rien supprimer.</p>
-  ${cx.actif ? '' : `<p class="warnbox">${emo('🔒')} Le connecteur est désactivé : l'administrateur doit l'activer (en bas de cette page) avant de pouvoir l'utiliser.</p>`}
-  ${ui.newKey ? `<div class="keybox"><p><b>Votre lien personnel</b> (il ne sera plus affiché : copiez-le maintenant, et ne le partagez avec personne) :</p>
-    <code id="new-key">${esc(lien(ui.newKey))}</code>
-    <div class="data-btns"><button class="btn primary sm" data-act="copy" data-target="new-key">Copier le lien</button></div>
-    <p class="hint"><b>${emo('🟠')} Claude</b> — Paramètres → Connecteurs → <b>Ajouter un connecteur personnalisé</b> : collez le lien ci-dessus.</p>
-    <p class="hint"><b>${emo('🟢')} ChatGPT</b> — Paramètres → Applications et connecteurs → mode développeur → <b>Créer</b> : collez le même lien, authentification « Aucune ».</p>
-    <p class="hint">Mode d'emploi détaillé : docs/lier-a-claude.md et docs/lier-a-chatgpt.md.</p></div>` : ''}
-  ${keys.length ? `<ul class="team keys">${keys.map(k => `<li>${ic('key')}<b>${esc(k.name)}</b><span class="meta">créée ${fmtStamp(k.createdAt)}${k.lastUsed ? ' · utilisée ' + fmtStamp(k.lastUsed) : ' · jamais utilisée'}</span><span></span><button class="del" data-act="key-del" data-id="${esc(k.id)}" aria-label="Supprimer la clé ${esc(k.name)}">${ic('trash')}</button></li>`).join('')}</ul>` : ''}
-  <form id="key-form" class="inline-key"><input type="text" id="k-name" maxlength="60" value="Claude" aria-label="Nom de la clé"><button class="btn sm">${ic('key', 'sm')}Créer une clé d'accès</button></form>
-  ${isAdmin() ? `<div class="connecteur ${cx.actif ? 'on' : ''}"><h4>${emo('🌐')} Connecteur Claude / ChatGPT (administrateur)</h4>
-   <p class="hint">Quand il est activé, les personnes qui ont une clé d'accès peuvent relier Claude ou ChatGPT à leurs tâches. Seuls les outils de tâches sont ouverts (jamais les pages de l'application), uniquement avec une clé personnelle, et rien ne peut être supprimé. Désactivé, plus personne ne peut s'en servir.</p>
+  <p class="note">Une clé d'accès permet à un assistant (Claude ou ChatGPT) de lire et de faire avancer <b>vos</b> tâches : « Quelles sont mes tâches en retard ? », « Crée un devis pour l'élevage Martin avec ces étapes… ». La clé a les mêmes droits que votre compte, ne peut <b>rien supprimer</b>, et expire (vous choisissez la durée). Elle voyage dans un <b>en-tête sécurisé</b>, jamais dans une adresse.</p>
+  ${cx.actif ? '' : `<p class="warnbox">${emo('🔒')} Le connecteur en ligne est désactivé : l'administrateur doit l'activer (en bas de cette section) avant de pouvoir l'utiliser.</p>`}
+  ${ui.newKey ? `<div class="keybox"><p><b>Votre nouvelle clé</b> (elle ne sera plus affichée : copiez-la maintenant, ne la partagez avec personne) :</p>
+    <code id="new-key">${esc(ui.newKey)}</code>
+    <div class="data-btns"><button class="btn primary sm" data-act="copy" data-target="new-key">Copier la clé</button></div>
+    <p class="hint"><b>${emo('🟠')} Claude Desktop (recommandé)</b> — la clé reste sur votre ordinateur : double-cliquez sur <b>lier-a-claude.bat</b> (voir docs/lier-a-claude.md), adresse du site : <b>${esc(site)}</b>.</p>
+    <p class="hint"><b>${emo('🟢')} Connecteur en ligne</b> (outils qui savent envoyer un en-tête) — adresse : <b>${esc(site)}/mcp</b>, en-tête <b>Authorization: Bearer</b> suivi de la clé. Si votre outil ne permet pas d'ajouter d'en-tête, utilisez la méthode locale ci-dessus : une clé n'est jamais acceptée dans l'adresse.</p></div>` : ''}
+  ${keys.length ? `<ul class="team keys">${keys.map(k => `<li>${ic('key')}<b>${esc(k.name)}</b><span class="meta">${esc(k.prefix || '')}… · ${k.scope === 'lecture' ? 'lecture seule' : 'lecture et écriture'} · ${exp(k)}${k.lastUsed ? ' · utilisée ' + fmtStamp(k.lastUsed) : ' · jamais utilisée'}</span><span></span><button class="del" data-act="key-del" data-id="${esc(k.id)}" aria-label="Supprimer la clé ${esc(k.name)}">${ic('trash')}</button></li>`).join('')}</ul>` : ''}
+  <form id="key-form" class="inline-key"><input type="text" id="k-name" maxlength="60" value="Claude" aria-label="Nom de la clé">
+   <select id="k-scope" aria-label="Droits"><option value="ecriture">Lecture et écriture</option><option value="lecture">Lecture seule</option></select>
+   <select id="k-days" aria-label="Durée"><option value="30">30 jours</option><option value="90" selected>90 jours</option><option value="365">1 an</option></select>
+   <button class="btn sm">${ic('key', 'sm')}Créer une clé d'accès</button></form>
+  ${isAdmin() ? `<div class="connecteur ${cx.actif ? 'on' : ''}"><h4>${emo('🌐')} Connecteur en ligne Claude / ChatGPT (administrateur)</h4>
+   <p class="hint">Quand il est activé, les personnes qui ont une clé d'accès peuvent relier un assistant à leurs tâches. Seuls les outils de tâches sont ouverts (jamais les pages de l'application), uniquement avec une clé personnelle, et rien ne peut être supprimé. Désactivé, plus personne ne peut s'en servir. Vous pouvez révoquer n'importe quelle clé dans « Sécurité ».</p>
    <div class="data-btns"><span class="rolechip ${cx.actif ? 'admin' : ''}">${cx.actif ? 'Activé' : 'Désactivé'}</span>
    <button class="btn sm ${cx.actif ? '' : 'primary'}" data-act="connecteur" data-on="${cx.actif ? 0 : 1}">${cx.actif ? 'Désactiver' : 'Activer le connecteur'}</button></div></div>` : ''}
   </div>`;
@@ -407,4 +452,63 @@ function vHistorique() {
   </div>
   ${ui.hist && ui.hist.error ? `<p class="err">${esc(ui.hist.error)}</p>` : ''}
   <ul class="hist" id="hist-list">${histListe()}</ul>`;
+}
+
+/* ---------- Corbeille ---------- */
+function vCorbeille() {
+  const d = ui.trash, admin = isAdmin();
+  if (!d) return `<section class="form-page"><p class="eyebrow">Corbeille</p><h1>Éléments supprimés</h1><div class="panel"><p class="hint">Chargement…</p></div></section>`;
+  const qui = id => id ? esc(userById(id).name) : '—';
+  const ligne = (kind, x, titre, sous) => `<li><span class="gtile cat-tile">${emo(kind === 'tache' ? '📄' : '📁')}</span><div class="trash-t"><b>${titre}</b><span class="hint">${sous} · supprimé par ${qui(x.deletedBy)} le ${esc(stampFr(x.deletedAt))} · ${x.joursRestants} jour${x.joursRestants > 1 ? 's' : ''} avant suppression définitive</span></div>
+    <span class="row-btns"><button class="btn sm" data-act="trash-restore" data-kind="${kind}" data-id="${esc(x.id)}">Restaurer</button>${admin ? `<button class="btn sm danger" data-act="trash-purge" data-kind="${kind}" data-id="${esc(x.id)}">${ui.purgeArm === kind + x.id ? 'Confirmer : supprimer pour toujours' : 'Supprimer définitivement'}</button>` : ''}</span></li>`;
+  return `<section class="form-page"><p class="eyebrow">Corbeille</p><h1>Éléments supprimés</h1>
+  <div class="panel"><p class="hint">Une tâche ou un groupe supprimé reste ici ${d.jours} jours : avec ses étapes, ses commentaires et son historique, il peut être restauré tel quel. ${admin ? 'Seul l\'administrateur peut supprimer définitivement.' : 'Vous voyez les éléments de vos groupes dont vous êtes responsable.'}</p></div>
+  <div class="panel" style="margin-top:16px"><h3>Tâches</h3><ul class="glist trash">${d.tasks.map(t => ligne('tache', t, esc(t.title), esc(t.group) + (t.groupDeleted ? ' (groupe aussi supprimé)' : ''))).join('') || '<li class="hint">Aucune tâche supprimée.</li>'}</ul></div>
+  <div class="panel" style="margin-top:16px"><h3>Groupes</h3><ul class="glist trash">${d.groups.map(g => ligne('groupe', g, esc(g.name), 'groupe')).join('') || '<li class="hint">Aucun groupe supprimé.</li>'}</ul></div></section>`;
+}
+
+/* ---------- Journal des opérations sensibles (administrateur) ---------- */
+const AUDIT_FAMILLES = [['', 'Tout'], ['connexion', 'Connexions'], ['compte', 'Comptes'], ['mot_de_passe', 'Mots de passe'], ['cle', 'Clés d\'accès'], ['tache', 'Tâches'], ['groupe', 'Groupes'], ['sauvegarde', 'Sauvegardes'], ['migration', 'Mises à jour'], ['connecteur', 'Connecteur']];
+function vJournal() {
+  const d = ui.audit;
+  const lib = a => ({ 'connexion.ok': 'Connexion', 'connexion.echec': 'Connexion refusée', 'connexion.bloquee': 'Compte bloqué (essais répétés)', 'deconnexion': 'Déconnexion', 'compte.cree': 'Compte créé', 'compte.modifie': 'Compte modifié', 'compte.mot_de_passe_reinitialise': 'Mot de passe réinitialisé', 'compte.deconnecte': 'Appareils déconnectés',
+    'mot_de_passe.change': 'Mot de passe changé', 'mot_de_passe.echec': 'Changement de mot de passe refusé', 'cle.creee': 'Clé d\'accès créée', 'cle.supprimee': 'Clé supprimée', 'cle.revoquee': 'Clé révoquée', 'tache.supprimee': 'Tâche mise à la corbeille', 'tache.restauree': 'Tâche restaurée', 'tache.purgee': 'Tâche supprimée définitivement',
+    'groupe.cree': 'Groupe créé', 'groupe.modifie': 'Groupe modifié', 'groupe.supprime': 'Groupe mis à la corbeille', 'groupe.restaure': 'Groupe restauré', 'groupe.purge': 'Groupe supprimé définitivement', 'sauvegarde.ok': 'Sauvegarde automatique', 'sauvegarde.echec': 'ÉCHEC de sauvegarde', 'sauvegarde.telechargee': 'Sauvegarde téléchargée', 'sauvegarde.refusee': 'Téléchargement de sauvegarde refusé',
+    'migration.ok': 'Base mise à jour', 'migration.echec': 'ÉCHEC de mise à jour', 'connecteur.active': 'Connecteur activé', 'connecteur.desactive': 'Connecteur désactivé', 'installation.admin_cree': 'Installation : administrateur créé', 'categorie.creee': 'Catégorie créée', 'categorie.modifiee': 'Catégorie modifiée', 'categorie.supprimee': 'Catégorie supprimée' })[a] || a;
+  return `<section class="form-page"><p class="eyebrow">Sécurité</p><h1>Journal des opérations sensibles</h1>
+  <div class="panel"><p class="hint">Ce journal ne peut ni être modifié ni être effacé depuis l'application. Il ne contient jamais de mot de passe ni de clé.</p>
+  <form id="audit-form" class="inline-key"><select id="au-action" aria-label="Type d'opération">${AUDIT_FAMILLES.map(([v, l]) => `<option value="${v}" ${ui.auditAction === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+   <input type="search" id="au-q" placeholder="Rechercher (nom, détail)" value="${esc(ui.auditQ)}" aria-label="Rechercher"><button class="btn sm">Filtrer</button></form></div>
+  <div class="panel" style="margin-top:16px">${!d ? '<p class="hint">Chargement…</p>' : `<ul class="audit">${d.events.map(e => `<li class="${/echec|bloquee|refusee|purg/.test(e.action) ? 'bad' : ''}"><span class="h-when">${esc(stampFr(e.at))}</span><span><b>${esc(lib(e.action))}</b> · ${esc(e.userName || '—')}${e.ip ? ' · <span class="mono small">' + esc(e.ip) + '</span>' : ''}${e.detail ? '<br><span class="hint">' + esc(e.detail) + '</span>' : ''}</span></li>`).join('') || '<li class="hint">Rien à afficher.</li>'}</ul>
+   ${d.events.length >= 100 ? '<div class="actions"><button class="btn sm" data-act="audit-more">Voir plus ancien</button></div>' : ''}`}</div></section>`;
+}
+
+/* ---------- Cloche : retards, échéances proches, notifications ---------- */
+function vNotifs() {
+  const d = ui.notifs;
+  if (!d) return `<section class="form-page"><p class="eyebrow">Pour vous</p><h1>À surveiller</h1><div class="panel"><p class="hint">Chargement…</p></div></section>`;
+  const tache = (t, extra) => `<li><button class="trow st-${extra}" data-act="open-task" data-id="${esc(t.id)}"><span class="tt"><b>${esc(t.title)}</b><span class="hint">fin ${fmt(t.end)}</span></span></button></li>`;
+  const lib = { assigned: '📌', comment: '💬', done: '✅' };
+  return `<section class="form-page"><p class="eyebrow">Pour vous</p><h1>À surveiller</h1>
+  <div class="panel"><h3>${emo('🚨')} En retard (${d.retard.length})</h3><ul class="notif">${d.retard.map(t => `<li><button class="link" data-act="open-task" data-id="${esc(t.id)}"><b>${esc(t.title)}</b></button> <span class="hint">— ${t.jours} jour${t.jours > 1 ? 's' : ''} de retard (fin le ${fmt(t.end)})</span></li>`).join('') || '<li class="hint">Rien en retard : bravo !</li>'}</ul></div>
+  <div class="panel" style="margin-top:16px"><h3>${emo('⚠️')} À faire dans les 7 jours (${d.bientot.length})</h3><ul class="notif">${d.bientot.map(t => `<li><button class="link" data-act="open-task" data-id="${esc(t.id)}"><b>${esc(t.title)}</b></button> <span class="hint">— ${t.jours === 0 ? 'aujourd\'hui' : 'dans ' + t.jours + ' jour' + (t.jours > 1 ? 's' : '')} (${fmt(t.end)})</span></li>`).join('') || '<li class="hint">Rien d\'urgent.</li>'}</ul></div>
+  <div class="panel" style="margin-top:16px"><h3>${emo('🔔')} Notifications ${d.unread ? `<small class="count">${d.unread} non lue${d.unread > 1 ? 's' : ''}</small>` : ''}</h3>
+   <ul class="notif">${d.notifications.map(n => `<li class="${n.readAt ? '' : 'unread'}"><span>${emo(lib[n.kind] || '🔔')}</span><span>${n.taskId && S.tasks.some(t => t.id === n.taskId) ? `<button class="link" data-act="open-task" data-id="${esc(n.taskId)}">${esc(n.text)}</button>` : esc(n.text)}<br><span class="hint">${esc(fmtStamp(n.at))}</span></span></li>`).join('') || '<li class="hint">Aucune notification pour l\'instant. Vous serez prévenu(e) quand une tâche vous est attribuée, commentée ou terminée.</li>'}</ul>
+   ${d.unread ? '<div class="actions"><button class="btn sm" data-act="notifs-read">Tout marquer comme lu</button></div>' : ''}</div></section>`;
+}
+
+/* ---------- Tableau de bord Direction (administrateur, lecture seule) ---------- */
+function vDirection() {
+  const d = ui.direction;
+  if (!d) return `<section class="form-page"><p class="eyebrow">Direction</p><h1>Tableau de bord</h1><div class="panel"><p class="hint">Chargement…</p></div></section>`;
+  const t = d.totaux, max = Math.max(1, ...d.semaines.flatMap(s => [s.creees, s.terminees]));
+  const kpi = (n, l, cls = '') => `<div class="kpi ${cls}"><b>${n}</b><span>${l}</span></div>`;
+  return `<section class="form-page wide"><p class="eyebrow">Direction</p><h1>Tableau de bord</h1>
+  <div class="kpis">${kpi(t.ouvertes, 'tâches en cours')}${kpi(t.retard, 'en retard', t.retard ? 'bad' : '')}${kpi(t.sous7j, 'échéance sous 7 jours')}${kpi(t.terminees30j, 'terminées (30 j)', 'ok')}${kpi(t.creees30j, 'créées (30 j)')}</div>
+  <div class="panel" style="margin-top:16px"><h3>Par groupe</h3><div class="tbl"><table><thead><tr><th>Groupe</th><th>En cours</th><th>En retard</th><th>Sous 7 j</th><th>Terminées (30 j)</th><th>Pire retard</th></tr></thead><tbody>
+   ${d.groupes.map(g => `<tr><td><span class="gtile sm" style="--g:${esc(g.color)}">${gIcon(g.icon, '')}</span> ${esc(g.name)}${!g.ouvertes && !g.terminees30j ? ' <span class="hint">(vide)</span>' : ''}</td><td>${g.ouvertes}</td><td class="${g.retard ? 'bad' : ''}">${g.retard}</td><td>${g.sous7j}</td><td>${g.terminees30j}</td><td>${g.pireRetard ? g.pireRetard + ' j' : '—'}</td></tr>`).join('')}</tbody></table></div></div>
+  <div class="panel" style="margin-top:16px"><h3>Par personne</h3><div class="tbl"><table><thead><tr><th>Personne</th><th>En cours</th><th>En retard</th><th>Terminées (30 j)</th></tr></thead><tbody>
+   ${d.personnes.map(p => `<tr><td>${esc(p.name)}</td><td>${p.ouvertes}</td><td class="${p.retard ? 'bad' : ''}">${p.retard}</td><td>${p.terminees30j}</td></tr>`).join('')}</tbody></table></div></div>
+  <div class="panel" style="margin-top:16px"><h3>8 dernières semaines</h3><div class="weeks">${d.semaines.map(s => `<div class="wk"><div class="bars"><span class="b c" style="height:${Math.round(s.creees / max * 100)}%" title="${s.creees} créées"></span><span class="b t" style="height:${Math.round(s.terminees / max * 100)}%" title="${s.terminees} terminées"></span></div><small>${fmt(s.debut)}</small><small>${s.creees} / ${s.terminees}</small></div>`).join('')}</div>
+   <p class="hint"><span class="dot c"></span> créées · <span class="dot t"></span> terminées — par semaine (lundi). Les tâches à la corbeille ne sont pas comptées.</p></div></section>`;
 }

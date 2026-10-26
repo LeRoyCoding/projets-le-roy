@@ -30,8 +30,8 @@ const TABLES = [
   ['tasks', ['id', 'group_id', 'owner_id', 'type', 'title', 'description', 'start_date', 'end_date', 'created_by', 'completed', 'done_at', 'done_by', 'priority', 'created_at', 'updated_at']],
   ['steps', ['id', 'task_id', 'position', 'label', 'description', 'done', 'done_at', 'done_by']],
   ['comments', ['id', 'task_id', 'user_id', 'body', 'created_at']],
-  ['activity', ['id', 'task_id', 'user_id', 'action', 'detail', 'created_at']],
-  ['api_tokens', ['id', 'user_id', 'name', 'token_hash', 'created_at', 'last_used']]
+  ['activity', ['id', 'task_id', 'user_id', 'action', 'detail', 'created_at']]
+  // Les anciennes clés d'accès ne sont PAS reprises : le nouveau format est plus sûr (portée, expiration). Chacun en recrée une.
 ];
 
 const q = v => {
@@ -42,17 +42,16 @@ const q = v => {
 
 const out = [`-- Export Projets Le Roy du ${new Date().toLocaleString('fr-FR')}`, 'SET NAMES utf8mb4;', 'SET FOREIGN_KEY_CHECKS=0;'];
 const resume = [];
-for (const [table, cols] of [...TABLES].reverse()) out.push(`DELETE FROM \`${table}\`;`);
+// Aucune suppression : ce fichier ne fait qu'AJOUTER des lignes (jamais de vidage de la base). À importer dans une base neuve.
 for (const [table, cols] of TABLES) {
   const order = table === 'steps' || table === 'comments' ? ' ORDER BY rowid' : '';
   const rows = db.prepare(`SELECT ${cols.map(c => `"${c}"`).join(', ')} FROM ${table}${order}`).all();
   for (const r of rows) out.push(`INSERT INTO \`${table}\` (${cols.map(c => `\`${c}\``).join(', ')}) VALUES (${cols.map(c => q(r[c])).join(', ')});`);
   resume.push(`${String(rows.length).padStart(5)}  ${table}`);
 }
-// Le mot de passe « admin » d'origine est-il encore en place ? L'application affichera alors un rappel pour le changer.
-const defaut = db.prepare("SELECT value FROM settings WHERE key = 'default_admin_password'").get();
-out.push(`INSERT INTO \`settings\` (k, v) VALUES ('default_admin_password', '${defaut && defaut.value === '1' ? '1' : '0'}') ON DUPLICATE KEY UPDATE v = VALUES(v);`, 'SET FOREIGN_KEY_CHECKS=1;');
-if (defaut && defaut.value === '1') console.log("\n  ATTENTION : le mot de passe de l'administrateur est encore « admin ». Changez-le des la premiere connexion sur OVH.");
+// Sécurité : tous les comptes repris devront choisir un nouveau mot de passe (12 caractères minimum) à leur première connexion.
+// Les responsables des groupes sont désignés par l'application (premier membre, ou l'administrateur) lors de la migration suivante.
+out.push("UPDATE `users` SET must_change = 1;", 'SET FOREIGN_KEY_CHECKS=1;');
 fs.writeFileSync(sortie, out.join('\n') + '\n', 'utf8');
 
 console.log('\n  Export terminé. Lignes exportées :');

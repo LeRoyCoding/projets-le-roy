@@ -14,7 +14,7 @@ const ui = {
   editId: null, dupFrom: null, editGroup: null, presetGroup: null,
   openTask: null, confirmDel: false, details: null,
   editUser: null, editCat: null, catDel: null, newKey: null, keys: [], historyOpen: false,
-  hist: null, histQ: '',
+  hist: null, histQ: '', trash: null, audit: null, notifs: null, direction: null, auditQ: '', auditAction: '', sec: null, backups: null, adminKeys: null, newKeyInfo: null, showReset: null,
   pwdErr: '', busy: false
 };
 
@@ -23,6 +23,7 @@ async function loadLogin() {
 }
 async function refresh() {
   S = await api('GET', '/api/state');
+  if (S.mustChange) return;   // mot de passe provisoire : seul l'écran de changement est affiché
   if (ui.openTask && !S.tasks.some(t => t.id === ui.openTask)) { ui.openTask = null; ui.details = null; }
   if (ui.tlGroup !== 'all' && !S.groups.some(g => g.id === ui.tlGroup)) ui.tlGroup = 'all';
   if (ui.cat && !S.categories.some(c => c.id === ui.cat)) ui.cat = '';
@@ -51,8 +52,12 @@ const people = () => S.users.filter(u => u.role !== 'admin' && u.active);
 // Groupes communs d'abord, puis groupes privés ; dans l'ordre de création.
 // Les groupes arrivent du serveur dans l'ordre réglé par l'administrateur.
 const sortGroups = list => [...list];
-const myGroups = () => { const me = cur(); return sortGroups(isAdmin() ? S.groups : S.groups.filter(g => (g.members || []).includes(me.id))); };
-const canEdit = t => { const me = cur(); return isAdmin() || t.ownerId === me.id || (groupById(t.groupId).members || []).includes(me.id); };
+// Les droits viennent du serveur (rôle dans chaque groupe) ; l'écran ne fait que les refléter, le serveur les applique.
+const myGroups = () => sortGroups(S.groups.filter(g => g.myRole));
+const writableGroups = () => myGroups().filter(g => g.canCreate);
+const canEdit = t => !!(t.can && t.can.step);                     // cocher les étapes, commenter, terminer
+const canManageTrash = () => isAdmin() || S.groups.some(g => g.myRole === 'responsable');
+const ROLES = { responsable: 'Responsable', membre: 'Membre', lecteur: 'Lecteur' };
 function taskConcerns(t, ids) { if (t.ownerId) return ids.includes(t.ownerId); return (groupById(t.groupId).members || []).some(m => ids.includes(m)); }
 
 function matchesSearch(t, q) {

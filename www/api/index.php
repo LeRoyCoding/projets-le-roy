@@ -37,20 +37,30 @@ try {
         }
     }
 
-    migrer();
-    $me = currentUser();
+    schema_gate();   // la base doit être à jour : jamais de migration ici
+    $me = auth_provider()->authenticate();
+
+    // Protection contre les requêtes envoyées par un autre site à l'insu de la personne connectée (session par cookie).
+    if ($method !== 'GET' && $me && empty($me['viaToken'])) {
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? null;
+        if ($origin !== null && strcasecmp((string)parse_url($origin, PHP_URL_HOST) . ((($p = parse_url($origin, PHP_URL_PORT)) ? ':' . $p : '')), (string)($_SERVER['HTTP_HOST'] ?? '')) !== 0) fail(403, 'Requête refusée (origine inconnue).');
+        $site = $_SERVER['HTTP_SEC_FETCH_SITE'] ?? null;
+        if ($site !== null && !in_array($site, ['same-origin', 'none'], true)) fail(403, 'Requête refusée (origine inconnue).');
+    }
+
     $out = dispatch($method, $path, $_GET, $body, $me);
 
-    if (is_array($out) && isset($out['__raw'])) {
-        $f = $out['__raw'];
+    if (is_array($out) && isset($out['__stream'])) {
+        $f = $out['__stream'];
         header('Content-Type: ' . $f['type']);
         header('Content-Disposition: attachment; filename="' . $f['filename'] . '"');
-        echo $f['content'];
+        header('Cache-Control: no-store');
+        ($f['fn'])();
         exit;
     }
     repondre(200, $out);
 } catch (HttpError $e) {
-    repondre($e->status, ['error' => $e->getMessage()]);
+    repondre($e->status, ['error' => $e->getMessage()] + ($e->errCode ? ['code' => $e->errCode] : []));
 } catch (Throwable $e) {
     error_log('Projets Le Roy : ' . $e);
     repondre(500, ['error' => 'Erreur inattendue du serveur.']);

@@ -20,3 +20,4 @@ outils/cloudflared
 # Identifiants de la base OVH : uniquement sur l'hébergement, jamais dans Git
 www/config.php
 export-ovh*.sql
+__pycache__/

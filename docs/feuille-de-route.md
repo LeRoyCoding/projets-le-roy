@@ -11,6 +11,9 @@ postes, commentaires, qui a validé chaque étape et quand, historique des tâch
 export Excel, sauvegardes automatiques, mode sombre, tablette, lien avec Claude et ChatGPT. Hébergée chez OVHcloud depuis octobre 2026 (accessible partout, avec QR code d'accès). Et surtout : simple,
 en français et sans abonnement logiciel.
 
+## Fait dans la version de stabilisation
+Corbeille, droits fins par groupe, journal des opérations sensibles, notifications et résumé quotidien, calcul des retards, tableau de bord Direction, sauvegardes chiffrées vers le serveur interne, déploiement avec retour arrière. Les autres lignes ci-dessous restent à faire ; l'ordre proposé et les risques sont dans [etude-priorite-2.md](etude-priorite-2.md).
+
 ## Ce qui manque, par priorité
 
 ### 🔴 Priorité haute — gros gain au quotidien, effort raisonnable

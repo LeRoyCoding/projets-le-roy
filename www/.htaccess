@@ -19,7 +19,7 @@ RewriteRule ^mcp(/.*)?$ api/mcp.php [L,QSA]
 </IfModule>
 
 # Fichiers qui ne doivent jamais être téléchargeables.
-<FilesMatch "^(config\.php|config\.exemple\.php|migrations\.php|lib\.php|routes\.php|mcp-tools\.php|.*\.sql|.*\.md)$">
+<FilesMatch "^(config\.php|config\.exemple\.php|migrations\.php|lib\.php|core\.php|schema\.php|auth\.php|permissions\.php|backup\.php|webtool\.php|routes(_[a-z]+)?\.php|mcp-tools\.php|.*\.(sql|md|log|bak|old|orig|tmp|zip|tar|gz|enc|env|ini|pem|key|json))$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -32,6 +32,7 @@ RewriteRule ^mcp(/.*)?$ api/mcp.php [L,QSA]
 # En-têtes de sécurité.
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Robots-Tag "noindex, nofollow"
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Referrer-Policy "same-origin"
   Header always set Strict-Transport-Security "max-age=31536000"
